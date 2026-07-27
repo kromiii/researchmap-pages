@@ -1,0 +1,243 @@
+---
+import Base from "../layouts/Base.astro";
+import { getResearcher } from "../lib/researchmap";
+import {
+  buildHero,
+  buildRecentUpdates,
+  buildSections,
+  lastUpdated,
+  pageTitle,
+  uiStrings,
+  TABS,
+  type Lang,
+  type SectionView,
+} from "../lib/view";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const { profile, sections } = await getResearcher();
+
+const ui = uiStrings(lang);
+const hero = buildHero(profile, lang);
+const sectionViews = buildSections(sections, lang);
+const recentUpdates = buildRecentUpdates(sections, lang);
+const updatedDate = lastUpdated(profile, sections, lang);
+
+// Group sections into tabs (ordered as declared in TABS);
+// anything unassigned falls into the last tab.
+const assigned = new Set(TABS.flatMap((tab) => tab.sections));
+const tabViews = TABS.map((tab, i) => {
+  const types = [...tab.sections];
+  if (i === TABS.length - 1)
+    types.push(...sectionViews.map((s) => s.type).filter((t) => !assigned.has(t)));
+  return {
+    id: tab.id,
+    label: ui.tabs[tab.id],
+    sections: types
+      .map((type) => sectionViews.find((s) => s.type === type))
+      .filter((s): s is NonNullable<typeof s> => s != null),
+  };
+}).filter((tab) => tab.sections.length > 0);
+
+// Single-section tabs (publications / talks) show the item count on the tab.
+const tabCount = (tab: { sections: SectionView[] }) =>
+  tab.sections.length === 1 ? tab.sections[0].count : undefined;
+
+const base = import.meta.env.BASE_URL.endsWith("/")
+  ? import.meta.env.BASE_URL
+  : import.meta.env.BASE_URL + "/";
+const path = lang === "ja" ? "" : "en/";
+const title = pageTitle(profile, lang);
+const description = [hero.name, ...hero.affiliations].join(" — ");
+---
+
+<Base lang={lang} title={title} description={description} path={path}>
+  <header class="site-header">
+    <a class="brand" href={base}>{hero.name}</a>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <a href={base} class={lang === "ja" ? "active" : ""}>日本語</a>
+      <a href={`${base}en/`} class={lang === "en" ? "active" : ""}>English</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="about">
+      <img src={`${base}avatar.jpg`} alt="" onerror="this.style.display='none'" />
+      <div class="hero-body">
+        <h1>{hero.name}</h1>
+        <p class="kana">{hero.altName}</p>
+        <p class="affiliation" set:html={hero.affiliations.join("<br>")} />
+        <div class="bio" set:html={hero.bioHtml} />
+        <div class="hero-links">
+          {hero.links.map((l) => (
+            <a href={l.href} target="_blank" rel="noopener">
+              {l.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {recentUpdates.length > 0 && (
+      <section class="recent" id="recent">
+        <h2>{ui.recentTitle}</h2>
+        <ul>
+          {recentUpdates.map((r) => (
+            <li>
+              <a href={`#${r.sectionType}`}>
+                <span class="badge badge-new">{ui.badgeNew}</span>
+                <span class="recent-cat">{r.sectionLabel}</span>
+                <span class="recent-title">{r.title}</span>
+                <span class="recent-date">{r.date}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      {tabViews.map((tab, i) => (
+        <button
+          role="tab"
+          id={`tab-${tab.id}`}
+          aria-controls={`panel-${tab.id}`}
+          aria-selected={i === 0 ? "true" : "false"}
+          data-tab={tab.id}
+        >
+          {tab.label}
+          {tabCount(tab) != null && <span class="count">{tabCount(tab)}</span>}
+        </button>
+      ))}
+    </nav>
+
+    {tabViews.map((tab, i) => (
+      <div
+        class={`tab-panel${i === 0 ? " active" : ""}`}
+        id={`panel-${tab.id}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${tab.id}`}
+        data-tab-panel={tab.id}
+      >
+        {tab.sections.map((s) => (
+          <section id={s.type}>
+            <h2>
+              {s.title}
+              {s.count != null && <span class="count">{s.count}</span>}
+            </h2>
+
+            {s.kind === "chips" && (
+              <div class="chips">
+                {s.chips.map((c) => (
+                  <span>{c}</span>
+                ))}
+              </div>
+            )}
+
+            {s.kind === "rows" && (
+              <div class="rows">
+                {s.rows.map((r) => (
+                  <div>
+                    <div class="period">{r.period}</div>
+                    <div class="what">
+                      <div class="main">{r.main}</div>
+                      {r.sub && <div class="sub">{r.sub}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {s.kind === "items" && (
+              <ul class="items">
+                {s.items.map((it) => (
+                  <li>
+                    <div class="item-title">{it.title}</div>
+                    {it.sub && <div class="item-sub">{it.sub}</div>}
+                    <div class="item-meta">
+                      {it.meta.map((m) => (
+                        <span>{m}</span>
+                      ))}
+                      {it.badges.map((b) => (
+                        <span class="badge">{b}</span>
+                      ))}
+                      {it.links.map((l) => (
+                        <a href={l.href} target="_blank" rel="noopener">
+                          {l.label}
+                        </a>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
+    ))}
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      {ui.generatedNote}
+      <a
+        href={`https://researchmap.jp/${profile.permalink}`}
+        target="_blank"
+        rel="noopener"
+      >
+        researchmap.jp/{profile.permalink}
+      </a>
+      {updatedDate && <span class="updated">{ui.lastUpdated}: {updatedDate}</span>}
+    </p>
+  </footer>
+</Base>
+
+<script>
+  // Progressive enhancement: without JS every panel stays visible.
+  document.documentElement.classList.add("js");
+
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-tab]")];
+  const panels = [
+    ...document.querySelectorAll<HTMLElement>("[data-tab-panel]"),
+  ];
+
+  function activate(id: string, updateHash: boolean) {
+    if (!panels.some((p) => p.dataset.tabPanel === id)) return;
+    for (const tab of tabs)
+      tab.setAttribute("aria-selected", String(tab.dataset.tab === id));
+    for (const panel of panels)
+      panel.classList.toggle("active", panel.dataset.tabPanel === id);
+    if (updateHash) history.replaceState(null, "", `#${id}`);
+  }
+
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => {
+      activate(tab.dataset.tab!, true);
+      // If the reader has scrolled deep into a long tab, bring the tab bar back.
+      const bar = document.querySelector(".tabs")!;
+      if (bar.getBoundingClientRect().top < 0)
+        bar.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
+  // Deep links: #publications opens the tab; #published_papers (a section id)
+  // opens the tab containing that section and scrolls to it.
+  function applyHash() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const section = document.getElementById(hash);
+    const panel = section?.closest<HTMLElement>("[data-tab-panel]");
+    if (panel) {
+      activate(panel.dataset.tabPanel!, false);
+      section!.scrollIntoView();
+    } else {
+      activate(hash, false);
+    }
+  }
+
+  applyHash();
+  window.addEventListener("hashchange", applyHash);
+</script>
