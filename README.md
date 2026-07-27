@@ -22,6 +22,21 @@
 
 以降は毎日 6:00 JST に自動で最新データを取得して再デプロイします（スケジュールは `.github/workflows/deploy.yml` の cron で変更可能）。
 
+### ⚠️ 定期実行は60日で自動停止します
+
+GitHub Actions の仕様により、リポジトリに60日間コミットがないと `schedule` トリガーが自動で無効化され、毎日の再ビルドが止まります（サイト自体は最後にデプロイした状態のまま残ります）。無効化される前には GitHub からメール通知が届きます。
+
+止まってしまった場合の再開方法：
+
+- Web UI: リポジトリの **Actions** タブ → 左のワークフロー一覧から **Deploy to GitHub Pages** を選択 → 上部に表示される「This scheduled workflow is disabled…」バナーの **Enable workflow** をクリック
+- または [gh CLI](https://cli.github.com/) で:
+
+  ```sh
+  gh workflow enable deploy.yml
+  ```
+
+なお、何かコミットして push すれば60日のカウントはリセットされます（push 時にもデプロイが走ります）。
+
 ### Pages のソースが「Deploy from a branch」になっている場合
 
 `<ユーザー名>.github.io` リポジトリなどでは、GitHub Pages が最初から「Deploy from a branch」（Jekyll ビルド）で有効になっていることがあります。この状態だと、デプロイ本体は成功する一方で、GitHub が追加で実行する Jekyll ビルド（`pages build and deployment` ワークフロー）が Astro のソースを解釈できず失敗し続けます。

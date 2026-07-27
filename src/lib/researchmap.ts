@@ -17,6 +17,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function getJson(url: string): Promise<any> {
   const res = await fetch(url, {
     headers: { "User-Agent": "researchmap-pages builder" },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`researchmap API ${res.status}: ${url}`);
   return res.json();
