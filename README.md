@@ -18,9 +18,22 @@
    ```
 
 3. main に push するか、Actions タブから **Deploy to GitHub Pages** を手動実行する
-   （GitHub Pages の有効化はワークフローが自動で行います）
+   （GitHub Pages が未設定の場合はワークフローが自動で有効化します）
 
 以降は毎日 6:00 JST に自動で最新データを取得して再デプロイします（スケジュールは `.github/workflows/deploy.yml` の cron で変更可能）。
+
+### Pages のソースが「Deploy from a branch」になっている場合
+
+`<ユーザー名>.github.io` リポジトリなどでは、GitHub Pages が最初から「Deploy from a branch」（Jekyll ビルド）で有効になっていることがあります。この状態だと、デプロイ本体は成功する一方で、GitHub が追加で実行する Jekyll ビルド（`pages build and deployment` ワークフロー）が Astro のソースを解釈できず失敗し続けます。
+
+その場合は Pages のビルドソースを **GitHub Actions** に切り替えてください：
+
+- Web UI: リポジトリの **Settings → Pages → Build and deployment → Source** を「GitHub Actions」に変更
+- または [gh CLI](https://cli.github.com/) で:
+
+  ```sh
+  gh api -X PUT repos/<ユーザー名>/<リポジトリ名>/pages -f build_type=workflow
+  ```
 
 ## 特徴
 
