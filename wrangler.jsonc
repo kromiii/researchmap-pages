@@ -1,31 +1,33 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kromiii-info",
-  "main": "@astrojs/cloudflare/entrypoints/server",
-  "compatibility_date": "2026-07-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./dist"
-  },
-  "observability": {
-    "enabled": true
-  },
-  "vars": {
-    // researchmap のパーマリンク (https://researchmap.jp/xxxx の xxxx)
-    "RESEARCHMAP_PERMALINK": "kuromiya_hiroyuki"
-  },
-  "kv_namespaces": [
-    {
-      "binding": "RESEARCHMAP",
-      // `wrangler kv namespace create RESEARCHMAP` で作成した namespace の id に置き換える
-      "id": "bb45af16b08f4808b9c14069fe4cd374"
-    }
-  ],
-  "routes": [
-    {
-      "pattern": "kromiii.info",
-      "custom_domain": true
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "kromiii-info",
+	"main": "@astrojs/cloudflare/entrypoints/server",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		// researchmap のパーマリンク (https://researchmap.jp/xxxx の xxxx)
+		"RESEARCHMAP_PERMALINK": "kuromiya_hiroyuki"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "RESEARCHMAP",
+			// `wrangler kv namespace create RESEARCHMAP` で作成した namespace の id に置き換える
+			"id": "bb45af16b08f4808b9c14069fe4cd374"
+		}
+	],
+	"routes": [
+		{
+			"pattern": "kromiii.info",
+			"custom_domain": true
+		}
+	]
 }

@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+
 const API_BASE = "https://api.researchmap.jp";
 const PAGE_LIMIT = 100;
 const REQUEST_INTERVAL_MS = 300;
@@ -96,13 +98,13 @@ async function refreshAvatar(kv: KVNamespace, imageUrl?: string) {
  * runs in the background via waitUntil. Only the very first request after
  * the KV namespace is created pays the full fetch latency.
  */
-export async function getResearcher(runtime: Runtime): Promise<Researcher> {
-  const kv = runtime.env.RESEARCHMAP;
-  const permalink = runtime.env.RESEARCHMAP_PERMALINK;
+export async function getResearcher(ctx: ExecutionContext): Promise<Researcher> {
+  const kv = env.RESEARCHMAP;
+  const permalink = env.RESEARCHMAP_PERMALINK;
   const cached = await kv.get<CachedResearcher>(KV_KEY, "json");
   if (cached) {
     if (Date.now() - cached.fetchedAt > MAX_AGE_MS) {
-      runtime.ctx.waitUntil(
+      ctx.waitUntil(
         refresh(kv, permalink).catch((e) =>
           console.error("researchmap refresh failed:", e),
         ),
@@ -114,10 +116,8 @@ export async function getResearcher(runtime: Runtime): Promise<Researcher> {
 }
 
 /** Avatar bytes cached in KV, or null if not (yet) available. */
-export async function getAvatar(
-  runtime: Runtime,
-): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
-  const kv = runtime.env.RESEARCHMAP;
+export async function getAvatar(): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  const kv = env.RESEARCHMAP;
   const { value, metadata } = await kv.getWithMetadata<{
     contentType: string;
   }>(AVATAR_KEY, "arrayBuffer");

@@ -4,8 +4,7 @@ import { getAvatar, getResearcher } from "../lib/researchmap";
 // Serves the researchmap avatar from KV so the site does not hotlink
 // researchmap. Falls back to a direct fetch while KV is still cold.
 export const GET: APIRoute = async ({ locals }) => {
-  const runtime = locals.runtime;
-  const avatar = await getAvatar(runtime);
+  const avatar = await getAvatar();
   if (avatar) {
     return new Response(avatar.bytes, {
       headers: {
@@ -15,7 +14,7 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const { profile } = await getResearcher(runtime);
+  const { profile } = await getResearcher(locals.cfContext);
   if (!profile.image) return new Response(null, { status: 404 });
   const res = await fetch(profile.image);
   if (!res.ok) return new Response(null, { status: 404 });
