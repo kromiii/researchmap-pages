@@ -1,84 +1,78 @@
 # researchmap-pages
 
-[researchmap](https://researchmap.jp/) のデータから静的サイトを生成する研究者向け個人サイトのテンプレートです。ビルド時（[Astro](https://astro.build/)）に researchmap API から最新データを取得して完全な静的HTMLを出力するため、SEOに強く、リポジトリに個人データはコミットされません。GitHub Actions が毎日再ビルドして GitHub Pages にデプロイします。
+[researchmap](https://researchmap.jp/) のデータから研究者向け個人サイトを生成するテンプレートです。[Astro](https://astro.build/) の SSR を [Cloudflare Workers](https://workers.cloudflare.com/) 上で動かし、researchmap API のデータを Workers KV にキャッシュして配信します。リポジトリに個人データはコミットされません。
 
-デモ: https://kromiii.github.io
-
-## 使い方（researchmap ユーザーなら誰でも使えます）
-
-1. このリポジトリの **Use this template** から自分のリポジトリを作成する
-   （`<ユーザー名>.github.io` にすればユーザーサイト、それ以外の名前でもプロジェクトサイトとして動きます — base パスは自動判定）
-2. `config.json` の `permalink` を自分の researchmap パーマリンクに変更する
-   （`https://researchmap.jp/xxxx` の `xxxx` の部分）
-
-   ```json
-   {
-     "permalink": "your_permalink"
-   }
-   ```
-
-3. main に push するか、Actions タブから **Deploy to GitHub Pages** を手動実行する
-   （GitHub Pages が未設定の場合はワークフローが自動で有効化します）
-
-以降は毎日 6:00 JST に自動で最新データを取得して再デプロイします（スケジュールは `.github/workflows/deploy.yml` の cron で変更可能）。
-
-### ⚠️ 定期実行は60日で自動停止します
-
-GitHub Actions の仕様により、リポジトリに60日間コミットがないと `schedule` トリガーが自動で無効化され、毎日の再ビルドが止まります（サイト自体は最後にデプロイした状態のまま残ります）。無効化される前には GitHub からメール通知が届きます。
-
-止まってしまった場合の再開方法：
-
-- Web UI: リポジトリの **Actions** タブ → 左のワークフロー一覧から **Deploy to GitHub Pages** を選択 → 上部に表示される「This scheduled workflow is disabled…」バナーの **Enable workflow** をクリック
-- または [gh CLI](https://cli.github.com/) で:
-
-  ```sh
-  gh workflow enable deploy.yml
-  ```
-
-なお、何かコミットして push すれば60日のカウントはリセットされます（push 時にもデプロイが走ります）。
-
-### Pages のソースが「Deploy from a branch」になっている場合
-
-`<ユーザー名>.github.io` リポジトリなどでは、GitHub Pages が最初から「Deploy from a branch」（Jekyll ビルド）で有効になっていることがあります。この状態だと、デプロイ本体は成功する一方で、GitHub が追加で実行する Jekyll ビルド（`pages build and deployment` ワークフロー）が Astro のソースを解釈できず失敗し続けます。
-
-その場合は Pages のビルドソースを **GitHub Actions** に切り替えてください：
-
-- Web UI: リポジトリの **Settings → Pages → Build and deployment → Source** を「GitHub Actions」に変更
-- または [gh CLI](https://cli.github.com/) で:
-
-  ```sh
-  gh api -X PUT repos/<ユーザー名>/<リポジトリ名>/pages -f build_type=workflow
-  ```
-
-## 特徴
-
-- 完全静的HTML出力 — SEO・OGP・軽量表示に強い
-- タブUI（プロフィール / 論文 / 発表 / 受賞・他）でスクロール量を抑えたレイアウト。全コンテンツがHTMLに含まれるためSEOはそのまま、JS無効環境では全セクション表示にフォールバック
-- **新着ハイライト** — 直近90日以内に researchmap へ新規追加された業績をトップに NEW バッジ付きで表示（クリックで該当セクションへ移動）
-- フッターに最終更新日を自動表示
-- 日本語 (`/`) / 英語 (`/en/`) の2ページ生成、`hreflang` 対応
-- ダークモード対応
-- 論文・講演・受賞・経歴など researchmap の全業績セクションをページネーション付きで全件取得
+デモ: https://kromiii.info
 
 ## 仕組み
 
-- `src/lib/researchmap.ts` — ビルド時に researchmap API からプロフィールと全業績を取得（1ビルドにつき1回、メモ化）
+```
+訪問者 → Cloudflare Worker (Astro SSR) → Workers KV (researchmap データのキャッシュ)
+```
+
+- ページはリクエスト時に KV のキャッシュから描画される（数ミリ秒）
+- キャッシュが6時間より古い場合は、古いデータで即レスポンスを返しつつバックグラウンドで researchmap API から再取得して KV を更新する（stale-while-revalidate）
+- 定期ビルドが存在しないため、GitHub Actions の「60日でスケジュール実行が止まる」問題とは無縁
+- researchmap API が一時的に落ちていても、KV の古いデータで表示は継続する
+
+主なファイル:
+
+- `src/lib/researchmap.ts` — researchmap API からの取得と KV キャッシュ（stale-while-revalidate）
 - `src/lib/view.ts` — 言語ごとの表示用データへの変換ロジック。タブ構成（どのセクションをどのタブに載せるか）や新着抽出（90日・最大6件）もここで定義
 - `src/components/Page.astro` — ページ本体のテンプレートとタブ切り替えの小さなスクリプト
-- `src/pages/avatar.jpg.ts` — アバター画像もビルド時に取得して同梱（ホットリンク回避）
-- `.github/workflows/deploy.yml` — push 時・毎日の定期実行・手動実行でビルド → Pages デプロイ
+- `src/pages/avatar.jpg.ts` — アバター画像も KV にキャッシュして配信（ホットリンク回避）
+- `wrangler.jsonc` — Worker の設定（KV バインディング・カスタムドメイン）
 
-タブの構成やセクションの並び順は `src/lib/view.ts` の `TABS` を編集するだけで変更できます。
+## セットアップ
+
+1. このリポジトリの **Use this template** から自分のリポジトリを作成する
+2. [Cloudflare アカウント](https://dash.cloudflare.com/sign-up)（無料プランで可）を作成し、ローカルでログインする
+
+   ```sh
+   npm install
+   npx wrangler login
+   ```
+
+3. KV namespace を作成し、表示された `id` を `wrangler.jsonc` の `kv_namespaces[0].id` に貼り付ける
+
+   ```sh
+   npx wrangler kv namespace create RESEARCHMAP
+   ```
+
+4. `wrangler.jsonc` の残りを自分の環境に合わせる
+   - `vars.RESEARCHMAP_PERMALINK` — 自分の researchmap パーマリンク（`https://researchmap.jp/xxxx` の `xxxx`）
+   - `name` — Worker 名（好きな名前でよい）
+   - `routes` — 独自ドメインを使う場合: ドメインを Cloudflare に追加した上で `routes[0].pattern` を自分のドメインに変更。無料の `*.workers.dev` で試す場合: `routes` を削除し、デプロイ後にダッシュボードで workers.dev サブドメインを有効化
+5. `astro.config.mjs` の `site` を公開 URL に変更する
+6. デプロイ
+
+   ```sh
+   npm run deploy
+   ```
+
+デプロイが必要なのはコードを変更したときだけです。サイトのデータ更新はデプロイとは独立に Worker 自身が行うため、CI や定期実行の仕組みは必要ありません。
+
+## 特徴
+
+- サーバーサイドレンダリングで全コンテンツを HTML として返す — SEO・OGP に強い
+- タブUI（プロフィール / 論文 / 発表 / 受賞・他）でスクロール量を抑えたレイアウト。全コンテンツがHTMLに含まれるためSEOはそのまま、JS無効環境では全セクション表示にフォールバック
+- **新着ハイライト** — 直近90日以内に researchmap へ新規追加された業績をトップに NEW バッジ付きで表示（クリックで該当セクションへ移動）
+- フッターに最終更新日を自動表示
+- 日本語 (`/`) / 英語 (`/en/`) の2ページ、`hreflang` 対応
+- ダークモード対応
+- 論文・講演・受賞・経歴など researchmap の全業績セクションをページネーション付きで全件取得
+- データ鮮度は最終アクセスから最大6時間遅れ（`src/lib/researchmap.ts` の `MAX_AGE_MS` で調整可能）
 
 ## ローカルでの確認
 
 ```sh
 npm install
-npm run dev      # 開発サーバー (http://localhost:4321)
-npm run build    # dist/ に静的サイトを出力
+npm run dev        # 開発サーバー (http://localhost:4321)
+npm run build      # dist/ にビルド
+npx wrangler dev   # 本番同等の Workers 実行環境 + ローカル KV で確認
 ```
 
-環境変数でパーマリンクを上書きすることもできます: `RESEARCHMAP_PERMALINK=xxxx npm run build`
+`wrangler dev` はローカルにエミュレートされた KV を使うため、初回アクセスだけ researchmap からの全件取得（数秒〜十数秒）が走ります。
 
 ## License
 

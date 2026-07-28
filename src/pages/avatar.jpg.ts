@@ -1,10 +1,21 @@
 import type { APIRoute } from "astro";
-import { getResearcher } from "../lib/researchmap";
+import { getAvatar, getResearcher } from "../lib/researchmap";
 
-// Build-time endpoint: downloads the researchmap avatar into dist/avatar.jpg
-// so the published site does not hotlink researchmap.
-export const GET: APIRoute = async () => {
-  const { profile } = await getResearcher();
+// Serves the researchmap avatar from KV so the site does not hotlink
+// researchmap. Falls back to a direct fetch while KV is still cold.
+export const GET: APIRoute = async ({ locals }) => {
+  const runtime = locals.runtime;
+  const avatar = await getAvatar(runtime);
+  if (avatar) {
+    return new Response(avatar.bytes, {
+      headers: {
+        "Content-Type": avatar.contentType,
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  }
+
+  const { profile } = await getResearcher(runtime);
   if (!profile.image) return new Response(null, { status: 404 });
   const res = await fetch(profile.image);
   if (!res.ok) return new Response(null, { status: 404 });
