@@ -6,7 +6,7 @@ const REQUEST_INTERVAL_MS = 300;
 
 // KV のデータがこれより古いと、キャッシュを返しつつバックグラウンドで再取得する
 // (stale-while-revalidate)。researchmap API が落ちていても古いデータで表示は継続する。
-const MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const MAX_AGE_MS = 1 * 60 * 60 * 1000;
 
 const KV_KEY = "researcher:v1";
 const AVATAR_KEY = "avatar:v1";

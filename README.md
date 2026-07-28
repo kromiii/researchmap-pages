@@ -17,7 +17,7 @@
 flowchart LR
     V[訪問者] --> W["Cloudflare Worker<br>(Astro SSR)"]
     W <--> KV[("Workers KV<br>キャッシュ")]
-    W -. キャッシュが6時間より古いときだけ<br>バックグラウンドで再取得 .-> R[researchmap API]
+    W -. キャッシュが1時間より古いときだけ<br>バックグラウンドで再取得 .-> R[researchmap API]
 ```
 
 - ページは常に KV のキャッシュから即座に描画され、古いデータは裏で更新される(stale-while-revalidate)
