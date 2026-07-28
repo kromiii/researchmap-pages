@@ -52,13 +52,20 @@ async function fetchAllItems(permalink: string, type: string): Promise<any[]> {
 /** Fetch the full researcher profile from the researchmap API. */
 async function fetchResearcher(permalink: string): Promise<Researcher> {
   const profile = await getJson(`${API_BASE}/${permalink}?format=json`);
-  // The embedded @graph truncates long sections, so re-fetch each type in full.
-  const types: string[] = (profile["@graph"] ?? []).map((g: any) => g["@type"]);
+  const graph: any[] = profile["@graph"] ?? [];
   delete profile["@graph"];
   const sections: Record<string, any[]> = {};
-  for (const type of types) {
-    await sleep(REQUEST_INTERVAL_MS);
-    sections[type] = await fetchAllItems(permalink, type);
+  for (const g of graph) {
+    const type: string = g["@type"];
+    const embedded: any[] = g.items ?? [];
+    if (embedded.length >= (g.total_items ?? embedded.length)) {
+      // The profile response already has every item for this section.
+      sections[type] = embedded;
+    } else {
+      // Long sections are truncated in the profile response; re-fetch in full.
+      await sleep(REQUEST_INTERVAL_MS);
+      sections[type] = await fetchAllItems(permalink, type);
+    }
     console.log(`  researchmap: ${type} — ${sections[type].length} items`);
   }
   return { profile, sections };
