@@ -57,6 +57,14 @@ flowchart LR
 5. `astro.config.mjs` の `site` を公開 URL に変更する
 6. デプロイする
 
+   **方法A: Cloudflare の Git 連携(推奨)**
+
+   Cloudflare ダッシュボード → Workers & Pages → **Create application → Import a repository** から対象の GitHub リポジトリを選択すると、Worker の新規作成と Git 連携が同時に完了します(事前に `wrangler deploy` で Worker を作っておく必要はありません)。以降は `main` ブランチへの push を Cloudflare 独自のビルド環境が検知して自動デプロイします。GitHub Actions は使われず(Cloudflare の GitHub App が push を検知してビルド・デプロイまで行う)、`wrangler login` や手動デプロイも不要になります。`vars` や KV namespace id など機密情報を含まない設定は `wrangler.jsonc` にコミット済みなので、追加の Secrets 登録も不要です。
+
+   ※ ステップ3の KV namespace 作成だけは、この Git 連携より前に済ませておく必要があります(namespace id を `wrangler.jsonc` に書いてから push するため)。
+
+   **方法B: 手動デプロイ**
+
    ```sh
    npm run deploy
    ```
