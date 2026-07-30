@@ -137,9 +137,27 @@ export interface RowView {
 }
 
 export type SectionView =
-  | { type: string; title: string; count?: number; kind: "chips"; chips: string[] }
-  | { type: string; title: string; count?: number; kind: "rows"; rows: RowView[] }
-  | { type: string; title: string; count?: number; kind: "items"; items: ItemView[] };
+  | {
+      type: string;
+      title: string;
+      count?: number;
+      kind: "chips";
+      chips: string[];
+    }
+  | {
+      type: string;
+      title: string;
+      count?: number;
+      kind: "rows";
+      rows: RowView[];
+    }
+  | {
+      type: string;
+      title: string;
+      count?: number;
+      kind: "items";
+      items: ItemView[];
+    };
 
 export interface HeroView {
   name: string;
@@ -172,7 +190,10 @@ function makeHelpers(lang: Lang) {
   const names = (value: any): string => {
     const list = t(value);
     if (!Array.isArray(list)) return "";
-    return list.map((p: any) => p.name).filter(Boolean).join(", ");
+    return list
+      .map((p: any) => p.name)
+      .filter(Boolean)
+      .join(", ");
   };
 
   const externalLinks = (item: any): { href: string; label: string }[] => {
@@ -198,7 +219,8 @@ function makeHelpers(lang: Lang) {
 
 export function buildHero(profile: any, lang: Lang): HeroView {
   const { t } = makeHelpers(lang);
-  const jaName = `${profile.family_name?.ja ?? ""} ${profile.given_name?.ja ?? ""}`.trim();
+  const jaName =
+    `${profile.family_name?.ja ?? ""} ${profile.given_name?.ja ?? ""}`.trim();
   const kanaName =
     `${profile.family_name?.["ja-Kana"] ?? ""} ${profile.given_name?.["ja-Kana"] ?? ""}`.trim();
   const enName =
@@ -460,7 +482,11 @@ export function buildSections(
     }),
 
     academic_contribution: (items) =>
-      genericItems(items, "academic_contribution", "academic_contribution_title"),
+      genericItems(
+        items,
+        "academic_contribution",
+        "academic_contribution_title",
+      ),
     social_contribution: (items) =>
       genericItems(items, "social_contribution", "social_contribution_title"),
     others: (items) => genericItems(items, "others", "other_title"),

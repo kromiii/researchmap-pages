@@ -47,7 +47,10 @@ async function fetchResearcher(permalink: string): Promise<Researcher> {
 }
 
 /** Re-fetch everything from researchmap and store it in KV. */
-async function refresh(kv: KVNamespace, permalink: string): Promise<Researcher> {
+async function refresh(
+  kv: KVNamespace,
+  permalink: string,
+): Promise<Researcher> {
   const data = await fetchResearcher(permalink);
   const cached: CachedResearcher = { fetchedAt: Date.now(), data };
   await kv.put(KV_KEY, JSON.stringify(cached));
@@ -80,7 +83,9 @@ async function refreshAvatar(kv: KVNamespace, imageUrl?: string) {
  * runs in the background via waitUntil. Only the very first request after
  * the KV namespace is created pays the full fetch latency.
  */
-export async function getResearcher(ctx: ExecutionContext): Promise<Researcher> {
+export async function getResearcher(
+  ctx: ExecutionContext,
+): Promise<Researcher> {
   const kv = env.RESEARCHMAP;
   const permalink = env.RESEARCHMAP_PERMALINK;
   const cached = await kv.get<CachedResearcher>(KV_KEY, "json");
@@ -98,7 +103,10 @@ export async function getResearcher(ctx: ExecutionContext): Promise<Researcher> 
 }
 
 /** Avatar bytes cached in KV, or null if not (yet) available. */
-export async function getAvatar(): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+export async function getAvatar(): Promise<{
+  bytes: ArrayBuffer;
+  contentType: string;
+} | null> {
   const kv = env.RESEARCHMAP;
   const { value, metadata } = await kv.getWithMetadata<{
     contentType: string;

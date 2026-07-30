@@ -5,12 +5,12 @@ import {
   buildHero,
   buildRecentUpdates,
   buildSections,
+  type Lang,
   lastUpdated,
   pageTitle,
-  uiStrings,
-  TABS,
-  type Lang,
   type SectionView,
+  TABS,
+  uiStrings,
 } from "../lib/view";
 
 interface Props {
@@ -32,7 +32,9 @@ const assigned = new Set(TABS.flatMap((tab) => tab.sections));
 const tabViews = TABS.map((tab, i) => {
   const types = [...tab.sections];
   if (i === TABS.length - 1)
-    types.push(...sectionViews.map((s) => s.type).filter((t) => !assigned.has(t)));
+    types.push(
+      ...sectionViews.map((s) => s.type).filter((t) => !assigned.has(t)),
+    );
   return {
     id: tab.id,
     label: ui.tabs[tab.id],
