@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 
 const API_BASE = "https://api.researchmap.jp";
-const PAGE_LIMIT = 100;
-const REQUEST_INTERVAL_MS = 300;
+// researchmap API の limit パラメータの最大値。プロフィール取得時にこれを
+// 指定すると、業績数が 1000 件以下(通常はこれで十分)のセクションは
+// この 1 回のリクエストだけで全件揃う。
+const PAGE_LIMIT = 1000;
 
 // KV のデータがこれより古いと、キャッシュを返しつつバックグラウンドで再取得する
 // (stale-while-revalidate)。researchmap API が落ちていても古いデータで表示は継続する。
@@ -21,8 +23,6 @@ interface CachedResearcher {
   data: Researcher;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 async function getJson(url: string): Promise<any> {
   const res = await fetch(url, {
     headers: { "User-Agent": "researchmap-pages worker" },
@@ -32,41 +32,16 @@ async function getJson(url: string): Promise<any> {
   return res.json();
 }
 
-/** Fetch every item of one achievement type, following pagination. */
-async function fetchAllItems(permalink: string, type: string): Promise<any[]> {
-  const items: any[] = [];
-  let start = 1;
-  for (;;) {
-    const page = await getJson(
-      `${API_BASE}/${permalink}/${type}?format=json&limit=${PAGE_LIMIT}&start=${start}`,
-    );
-    const pageItems: any[] = page.items ?? [];
-    items.push(...pageItems);
-    const total: number = page.total_items ?? items.length;
-    if (!pageItems.length || items.length >= total) return items;
-    start += pageItems.length;
-    await sleep(REQUEST_INTERVAL_MS);
-  }
-}
-
-/** Fetch the full researcher profile from the researchmap API. */
+/** Fetch the full researcher profile from the researchmap API, in a single request. */
 async function fetchResearcher(permalink: string): Promise<Researcher> {
-  const profile = await getJson(`${API_BASE}/${permalink}?format=json`);
+  const profile = await getJson(
+    `${API_BASE}/${permalink}?format=json&limit=${PAGE_LIMIT}`,
+  );
   const graph: any[] = profile["@graph"] ?? [];
   delete profile["@graph"];
   const sections: Record<string, any[]> = {};
   for (const g of graph) {
-    const type: string = g["@type"];
-    const embedded: any[] = g.items ?? [];
-    if (embedded.length >= (g.total_items ?? embedded.length)) {
-      // The profile response already has every item for this section.
-      sections[type] = embedded;
-    } else {
-      // Long sections are truncated in the profile response; re-fetch in full.
-      await sleep(REQUEST_INTERVAL_MS);
-      sections[type] = await fetchAllItems(permalink, type);
-    }
-    console.log(`  researchmap: ${type} — ${sections[type].length} items`);
+    sections[g["@type"]] = g.items ?? [];
   }
   return { profile, sections };
 }

@@ -23,6 +23,7 @@ flowchart LR
 - ページは常に KV のキャッシュから即座に描画され、古いデータは裏で更新される(stale-while-revalidate)
 - 定期実行の CI が不要なため、GitHub Actions の「60日でスケジュールが止まる」問題と無縁
 - researchmap API が落ちていても KV の古いデータで表示を継続
+- 再取得時は researchmap API への負荷を抑えるため、プロフィール取得 API に `limit=1000`(API の上限値)を指定し、1リクエストで全業績を取得する
 
 ## 主なファイル
 
