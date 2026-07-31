@@ -50,7 +50,7 @@ const tabCount = (tab: { sections: SectionView[] }) =>
 
 const base = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
-  : import.meta.env.BASE_URL + "/";
+  : `${import.meta.env.BASE_URL}/`;
 const path = lang === "ja" ? "" : "en/";
 const title = pageTitle(profile, lang);
 const description = [hero.name, ...hero.affiliations].join(" — ");
@@ -67,119 +67,133 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
 
   <main>
     <section class="hero" id="about">
-      <img src={`${base}avatar.jpg`} alt="" onerror="this.style.display='none'" />
+      <img
+        src={`${base}avatar.jpg`}
+        alt=""
+        onerror="this.style.display='none'"
+      />
       <div class="hero-body">
         <h1>{hero.name}</h1>
         <p class="kana">{hero.altName}</p>
         <p class="affiliation" set:html={hero.affiliations.join("<br>")} />
         <div class="bio" set:html={hero.bioHtml} />
         <div class="hero-links">
-          {hero.links.map((l) => (
-            <a href={l.href} target="_blank" rel="noopener">
-              {l.label}
-            </a>
-          ))}
+          {
+            hero.links.map((l) => (
+              <a href={l.href} target="_blank" rel="noopener">
+                {l.label}
+              </a>
+            ))
+          }
         </div>
       </div>
     </section>
 
-    {recentUpdates.length > 0 && (
-      <section class="recent" id="recent">
-        <h2>{ui.recentTitle}</h2>
-        <ul>
-          {recentUpdates.map((r) => (
-            <li>
-              <a href={`#${r.sectionType}`}>
-                <span class="badge badge-new">{ui.badgeNew}</span>
-                <span class="recent-cat">{r.sectionLabel}</span>
-                <span class="recent-title">{r.title}</span>
-                <span class="recent-date">{r.date}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+    {
+      recentUpdates.length > 0 && (
+        <section class="recent" id="recent">
+          <h2>{ui.recentTitle}</h2>
+          <ul>
+            {recentUpdates.map((r) => (
+              <li>
+                <a href={`#${r.sectionType}`}>
+                  <span class="badge badge-new">{ui.badgeNew}</span>
+                  <span class="recent-cat">{r.sectionLabel}</span>
+                  <span class="recent-title">{r.title}</span>
+                  <span class="recent-date">{r.date}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <nav class="tabs" role="tablist" aria-label="Sections">
-      {tabViews.map((tab, i) => (
-        <button
-          role="tab"
-          id={`tab-${tab.id}`}
-          aria-controls={`panel-${tab.id}`}
-          aria-selected={i === 0 ? "true" : "false"}
-          data-tab={tab.id}
-        >
-          {tab.label}
-          {tabCount(tab) != null && <span class="count">{tabCount(tab)}</span>}
-        </button>
-      ))}
+      {
+        tabViews.map((tab, i) => (
+          <button
+            role="tab"
+            id={`tab-${tab.id}`}
+            aria-controls={`panel-${tab.id}`}
+            aria-selected={i === 0 ? "true" : "false"}
+            data-tab={tab.id}
+          >
+            {tab.label}
+            {tabCount(tab) != null && (
+              <span class="count">{tabCount(tab)}</span>
+            )}
+          </button>
+        ))
+      }
     </nav>
 
-    {tabViews.map((tab, i) => (
-      <div
-        class={`tab-panel${i === 0 ? " active" : ""}`}
-        id={`panel-${tab.id}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${tab.id}`}
-        data-tab-panel={tab.id}
-      >
-        {tab.sections.map((s) => (
-          <section id={s.type}>
-            <h2>
-              {s.title}
-              {s.count != null && <span class="count">{s.count}</span>}
-            </h2>
+    {
+      tabViews.map((tab, i) => (
+        <div
+          class={`tab-panel${i === 0 ? " active" : ""}`}
+          id={`panel-${tab.id}`}
+          role="tabpanel"
+          aria-labelledby={`tab-${tab.id}`}
+          data-tab-panel={tab.id}
+        >
+          {tab.sections.map((s) => (
+            <section id={s.type}>
+              <h2>
+                {s.title}
+                {s.count != null && <span class="count">{s.count}</span>}
+              </h2>
 
-            {s.kind === "chips" && (
-              <div class="chips">
-                {s.chips.map((c) => (
-                  <span>{c}</span>
-                ))}
-              </div>
-            )}
+              {s.kind === "chips" && (
+                <div class="chips">
+                  {s.chips.map((c) => (
+                    <span>{c}</span>
+                  ))}
+                </div>
+              )}
 
-            {s.kind === "rows" && (
-              <div class="rows">
-                {s.rows.map((r) => (
-                  <div>
-                    <div class="period">{r.period}</div>
-                    <div class="what">
-                      <div class="main">{r.main}</div>
-                      {r.sub && <div class="sub">{r.sub}</div>}
+              {s.kind === "rows" && (
+                <div class="rows">
+                  {s.rows.map((r) => (
+                    <div>
+                      <div class="period">{r.period}</div>
+                      <div class="what">
+                        <div class="main">{r.main}</div>
+                        {r.sub && <div class="sub">{r.sub}</div>}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {s.kind === "items" && (
-              <ul class="items">
-                {s.items.map((it) => (
-                  <li>
-                    <div class="item-title">{it.title}</div>
-                    {it.sub && <div class="item-sub">{it.sub}</div>}
-                    <div class="item-meta">
-                      {it.meta.map((m) => (
-                        <span>{m}</span>
-                      ))}
-                      {it.badges.map((b) => (
-                        <span class="badge">{b}</span>
-                      ))}
-                      {it.links.map((l) => (
-                        <a href={l.href} target="_blank" rel="noopener">
-                          {l.label}
-                        </a>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        ))}
-      </div>
-    ))}
+              {s.kind === "items" && (
+                <ul class="items">
+                  {s.items.map((it) => (
+                    <li>
+                      <div class="item-title">{it.title}</div>
+                      {it.sub && <div class="item-sub">{it.sub}</div>}
+                      <div class="item-meta">
+                        {it.meta.map((m) => (
+                          <span>{m}</span>
+                        ))}
+                        {it.badges.map((b) => (
+                          <span class="badge">{b}</span>
+                        ))}
+                        {it.links.map((l) => (
+                          <a href={l.href} target="_blank" rel="noopener">
+                            {l.label}
+                          </a>
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
+        </div>
+      ))
+    }
   </main>
 
   <footer class="site-footer">
@@ -192,7 +206,13 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
       >
         researchmap.jp/{profile.permalink}
       </a>
-      {updatedDate && <span class="updated">{ui.lastUpdated}: {updatedDate}</span>}
+      {
+        updatedDate && (
+          <span class="updated">
+            {ui.lastUpdated}: {updatedDate}
+          </span>
+        )
+      }
     </p>
   </footer>
 </Base>

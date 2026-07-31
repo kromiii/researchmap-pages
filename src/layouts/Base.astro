@@ -11,7 +11,7 @@ interface Props {
 const { lang, title, description, path } = Astro.props;
 const base = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
-  : import.meta.env.BASE_URL + "/";
+  : `${import.meta.env.BASE_URL}/`;
 const abs = (p: string) =>
   Astro.site ? new URL(base + p, Astro.site).href : undefined;
 ---
@@ -29,7 +29,11 @@ const abs = (p: string) =>
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="profile" />
-    {abs("avatar.jpg") && <meta property="og:image" content={abs("avatar.jpg")} />}
+    {
+      abs("avatar.jpg") && (
+        <meta property="og:image" content={abs("avatar.jpg")} />
+      )
+    }
   </head>
   <body>
     <slot />

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   researchmap's JSON-LD API shape differs per section and changes without
+   notice; we deliberately don't model it and treat it as untyped at this
+   boundary instead of chasing field-level types. */
 import { env } from "cloudflare:workers";
 
 const API_BASE = "https://api.researchmap.jp";

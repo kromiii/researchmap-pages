@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   researchmap's JSON-LD API shape differs per section and changes without
+   notice; we deliberately don't model it and treat it as untyped at this
+   boundary instead of chasing field-level types. */
+
 // Builds language-specific view models from raw researchmap data,
 // keeping the .astro templates free of data-wrangling logic.
 
@@ -412,7 +417,7 @@ export function buildSections(
           .filter(Boolean)
           .join(" ");
         const pages = p.starting_page
-          ? `pp.${p.starting_page}${p.ending_page ? "–" + p.ending_page : ""}`
+          ? `pp.${p.starting_page}${p.ending_page ? `–${p.ending_page}` : ""}`
           : "";
         const badges: string[] = [];
         if (p.referee) badges.push(ui.refereed);

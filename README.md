@@ -27,13 +27,13 @@ flowchart LR
 
 ## 主なファイル
 
-| ファイル | 役割 |
-| --- | --- |
-| `src/lib/researchmap.ts` | researchmap API の取得と KV キャッシュ(stale-while-revalidate) |
-| `src/lib/view.ts` | 表示用データへの変換・タブ構成・新着抽出(90日) |
-| `src/components/Page.astro` | ページ本体のテンプレートとタブ切り替え |
-| `src/pages/avatar.jpg.ts` | アバター画像の KV キャッシュ配信 |
-| `wrangler.jsonc` | Worker の設定(KV バインディング・カスタムドメイン) |
+| ファイル                    | 役割                                                           |
+| --------------------------- | -------------------------------------------------------------- |
+| `src/lib/researchmap.ts`    | researchmap API の取得と KV キャッシュ(stale-while-revalidate) |
+| `src/lib/view.ts`           | 表示用データへの変換・タブ構成・新着抽出(90日)                 |
+| `src/components/Page.astro` | ページ本体のテンプレートとタブ切り替え                         |
+| `src/pages/avatar.jpg.ts`   | アバター画像の KV キャッシュ配信                               |
+| `wrangler.jsonc`            | Worker の設定(KV バインディング・カスタムドメイン)             |
 
 ## セットアップ
 
