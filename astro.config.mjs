@@ -3,6 +3,6 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   site: "https://kromiii.info",
-  output: "server",
+  output: "static",
   adapter: cloudflare({ platformProxy: { enabled: true } }),
 });

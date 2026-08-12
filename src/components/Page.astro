@@ -18,7 +18,7 @@ interface Props {
 }
 
 const { lang } = Astro.props;
-const { profile, sections } = await getResearcher(Astro.locals.cfContext);
+const { profile, sections } = await getResearcher(Astro.locals?.cfContext);
 
 const ui = uiStrings(lang);
 const hero = buildHero(profile, lang);

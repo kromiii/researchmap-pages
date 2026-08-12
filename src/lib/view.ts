@@ -292,6 +292,22 @@ export interface RecentUpdate {
   date: string;
 }
 
+function getItemDate(item: any): string | null {
+  if (item["rm:created"]) return item["rm:created"];
+  if (item["rm:modified"]) return item["rm:modified"];
+  const rawDate =
+    item.publication_date ||
+    item.award_date ||
+    item.from_event_date ||
+    item.from_date ||
+    item.degree_date;
+  if (!rawDate) return null;
+  const s = String(rawDate);
+  if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+  if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
+  return s;
+}
+
 /** Items newly added to researchmap within the last `days` days. */
 export function buildRecentUpdates(
   sections: Record<string, any[]>,
@@ -306,7 +322,8 @@ export function buildRecentUpdates(
     const titleKey = TITLE_KEYS[type];
     if (!titleKey) continue;
     for (const item of items) {
-      const created = Date.parse(item["rm:created"] ?? "") || 0;
+      const dateStr = getItemDate(item);
+      const created = dateStr ? Date.parse(dateStr) || 0 : 0;
       if (created < cutoff) continue;
       const title = t(item[titleKey]);
       if (!title) continue;
@@ -334,9 +351,13 @@ export function lastUpdated(
 ): string {
   const { fmtDate } = makeHelpers(lang);
   let latest = Date.parse(profile["rm:modified"] ?? "") || 0;
-  for (const items of Object.values(sections))
-    for (const item of items)
-      latest = Math.max(latest, Date.parse(item["rm:modified"] ?? "") || 0);
+  for (const items of Object.values(sections)) {
+    for (const item of items) {
+      const dateStr = getItemDate(item);
+      const ts = dateStr ? Date.parse(dateStr) || 0 : 0;
+      latest = Math.max(latest, ts);
+    }
+  }
   return latest ? fmtDate(new Date(latest).toISOString().slice(0, 10)) : "";
 }
 

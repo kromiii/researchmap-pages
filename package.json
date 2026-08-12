@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "import": "node scripts/import.mjs",
     "build": "astro build",
     "preview": "astro build && wrangler dev",
     "deploy": "astro build && wrangler deploy",

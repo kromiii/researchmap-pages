@@ -1,17 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any --
-   researchmap's JSON-LD API shape differs per section and changes without
-   notice; we deliberately don't model it and treat it as untyped at this
-   boundary instead of chasing field-level types. */
+   researchmap's JSON-LD shape differs per section and changes without notice;
+   we deliberately don't model it and treat it as untyped at this boundary. */
+
+import fs from "node:fs";
+import path from "node:path";
 import { env } from "cloudflare:workers";
 
 const API_BASE = "https://api.researchmap.jp";
-// researchmap API の limit パラメータの最大値。プロフィール取得時にこれを
-// 指定すると、業績数が 1000 件以下(通常はこれで十分)のセクションは
-// この 1 回のリクエストだけで全件揃う。
 const PAGE_LIMIT = 1000;
-
-// KV のデータがこれより古いと、キャッシュを返しつつバックグラウンドで再取得する
-// (stale-while-revalidate)。researchmap API が落ちていても古いデータで表示は継続する。
 const MAX_AGE_MS = 1 * 60 * 60 * 1000;
 
 const KV_KEY = "researcher:v1";
@@ -27,6 +23,54 @@ interface CachedResearcher {
   data: Researcher;
 }
 
+export function parseJsonl(content: string): Researcher {
+  let profile: Record<string, any> = {};
+  const sections: Record<string, any[]> = {};
+  const lines = content.trim().split("\n");
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const parsed = JSON.parse(line);
+      const type = parsed.insert?.type;
+      const merge = parsed.merge || {};
+      if (type === "researchers") {
+        profile = merge;
+      } else if (type) {
+        if (merge.display && merge.display !== "disclosed") {
+          continue;
+        }
+        if (!sections[type]) sections[type] = [];
+        sections[type].push(merge);
+      }
+    } catch {
+      // Ignore invalid JSON lines
+    }
+  }
+
+  return { profile, sections };
+}
+
+export function getResearcherFromJsonl(): Researcher | null {
+  const jsonlPath = path.join(process.cwd(), "data", "researchmap.jsonl");
+  const samplePath = path.join(
+    process.cwd(),
+    "data",
+    "researchmap.sample.jsonl",
+  );
+
+  let targetPath: string | null = null;
+  if (fs.existsSync(jsonlPath)) {
+    targetPath = jsonlPath;
+  } else if (fs.existsSync(samplePath)) {
+    targetPath = samplePath;
+  }
+
+  if (!targetPath) return null;
+  const content = fs.readFileSync(targetPath, "utf-8");
+  return parseJsonl(content);
+}
+
 async function getJson(url: string): Promise<any> {
   const res = await fetch(url, {
     headers: { "User-Agent": "researchmap-pages worker" },
@@ -36,7 +80,6 @@ async function getJson(url: string): Promise<any> {
   return res.json();
 }
 
-/** Fetch the full researcher profile from the researchmap API, in a single request. */
 async function fetchResearcher(permalink: string): Promise<Researcher> {
   const profile = await getJson(
     `${API_BASE}/${permalink}?format=json&limit=${PAGE_LIMIT}`,
@@ -50,7 +93,6 @@ async function fetchResearcher(permalink: string): Promise<Researcher> {
   return { profile, sections };
 }
 
-/** Re-fetch everything from researchmap and store it in KV. */
 async function refresh(
   kv: KVNamespace,
   permalink: string,
@@ -66,7 +108,6 @@ async function refresh(
   return data;
 }
 
-/** Download the avatar into KV so the site does not hotlink researchmap. */
 async function refreshAvatar(kv: KVNamespace, imageUrl?: string) {
   if (!imageUrl) {
     await kv.delete(AVATAR_KEY);
@@ -82,39 +123,77 @@ async function refreshAvatar(kv: KVNamespace, imageUrl?: string) {
 }
 
 /**
- * Researcher data for one request. Served from KV; when the cached copy is
- * older than MAX_AGE_MS the stale copy is returned immediately and a refresh
- * runs in the background via waitUntil. Only the very first request after
- * the KV namespace is created pays the full fetch latency.
+ * Researcher data for one request.
+ * Prioritizes local `data/researchmap.jsonl` export file if present.
+ * Falls back to KV caching / API fetch if KV binding is available.
  */
 export async function getResearcher(
-  ctx: ExecutionContext,
+  ctx?: ExecutionContext,
 ): Promise<Researcher> {
-  const kv = env.RESEARCHMAP;
-  const permalink = env.RESEARCHMAP_PERMALINK;
-  const cached = await kv.get<CachedResearcher>(KV_KEY, "json");
-  if (cached) {
-    if (Date.now() - cached.fetchedAt > MAX_AGE_MS) {
-      ctx.waitUntil(
-        refresh(kv, permalink).catch((e) =>
-          console.error("researchmap refresh failed:", e),
-        ),
-      );
-    }
-    return cached.data;
+  const jsonlData = getResearcherFromJsonl();
+  if (jsonlData) {
+    return jsonlData;
   }
-  return refresh(kv, permalink);
+
+  try {
+    const kv = env.RESEARCHMAP;
+    const permalink = env.RESEARCHMAP_PERMALINK;
+    if (kv && permalink) {
+      const cached = await kv.get<CachedResearcher>(KV_KEY, "json");
+      if (cached) {
+        if (Date.now() - cached.fetchedAt > MAX_AGE_MS && ctx) {
+          ctx.waitUntil(
+            refresh(kv, permalink).catch((e) =>
+              console.error("researchmap refresh failed:", e),
+            ),
+          );
+        }
+        return cached.data;
+      }
+      return refresh(kv, permalink);
+    }
+  } catch {
+    // KV environment variable not present or not running in Worker
+  }
+
+  throw new Error(
+    "No researchmap data found. Please run 'npm run import <path-to-jsonl>' or place your export file at 'data/researchmap.jsonl'.",
+  );
 }
 
-/** Avatar bytes cached in KV, or null if not (yet) available. */
+/** Avatar bytes cached in public/ or KV, or null if not available. */
 export async function getAvatar(): Promise<{
   bytes: ArrayBuffer;
   contentType: string;
 } | null> {
-  const kv = env.RESEARCHMAP;
-  const { value, metadata } = await kv.getWithMetadata<{
-    contentType: string;
-  }>(AVATAR_KEY, "arrayBuffer");
-  if (!value) return null;
-  return { bytes: value, contentType: metadata?.contentType ?? "image/jpeg" };
+  const localAvatar = path.join(process.cwd(), "public", "avatar.jpg");
+  if (fs.existsSync(localAvatar)) {
+    const buffer = fs.readFileSync(localAvatar);
+    return {
+      bytes: buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength,
+      ) as ArrayBuffer,
+      contentType: "image/jpeg",
+    };
+  }
+
+  try {
+    const kv = env.RESEARCHMAP;
+    if (kv) {
+      const { value, metadata } = await kv.getWithMetadata<{
+        contentType: string;
+      }>(AVATAR_KEY, "arrayBuffer");
+      if (value) {
+        return {
+          bytes: value,
+          contentType: metadata?.contentType ?? "image/jpeg",
+        };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
