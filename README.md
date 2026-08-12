@@ -58,6 +58,25 @@
    - **Build output directory**: `dist`
    - 以降は `git push` するだけで自動でビルド・デプロイされます。
 
+## テンプレートの更新を取り込む方法
+
+本テンプレートリポジトリ（親リポジトリ）に新機能や修正が追加された場合、作成した自分のリポジトリに以下の手順で最新の変更を取り込むことができます。
+
+1. **親リポジトリを `upstream` リモートとして追加する (初回のみ)**
+
+   ```sh
+   git remote add upstream https://github.com/kromiii/researchmap-pages.git
+   ```
+
+2. **親リポジトリの最新変更を取得してマージする**
+
+   ```sh
+   git fetch upstream
+   git merge upstream/main --allow-unrelated-histories
+   ```
+
+   _(※ 2回目以降のマージは `--allow-unrelated-histories` オプションなしの `git merge upstream/main` のみでマージ可能です。)_
+
 ## 主なファイル
 
 | ファイル                        | 役割                                               |
