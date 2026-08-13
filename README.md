@@ -9,7 +9,7 @@
 1. **Use this template** から自分のリポジトリを作成し、ローカルにクローンします。
 
 > [!IMPORTANT]
-> researchmap のエクスポート JSONL には連絡先等の非公開情報が含まれる場合があるため、リポジトリは **Private (非公開)** で作成してください。
+> researchmap のエクスポート JSONL には連絡先等の非公開情報が含まれる場合があるため、リポジトリは **Private (非公開)** で作成することをおすすめします。
 
    ```sh
    npm install
@@ -57,7 +57,7 @@
    #### GitHub Pages を使う場合
    > [!NOTE]
    > **プライベートリポジトリと GitHub Pages の制限**  
-   > GitHub Free（無料プラン）の場合、Private リポジトリでの GitHub Pages 配信は行えません（Public リポジトリにするか、GitHub Pro 等が必要です）。なお、`npm run import` により非公開情報は自動的に除去されるため Public リポジトリでも安全に利用できます。
+   > GitHub Free（無料プラン）の場合、Private リポジトリでの GitHub Pages 配信は行えません（Public リポジトリにするか、GitHub Pro 等が必要です）。
 
    1. リポジトリの **Settings** > **Pages** > **Build and deployment** に移動し、**Source** を `GitHub Actions` に変更します。
    2. `.github/workflows/deploy.yml` などのワークフローファイルを作成し、GitHub Actions で自動デプロイを構成します（詳細は [Astro 公式 GitHub Pages デプロイガイド](https://docs.astro.build/ja/guides/deploy/github/) を参照してください）。
