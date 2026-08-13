@@ -4,20 +4,12 @@
 
 デモ: https://kromiii.info
 
-## 特徴
-
-- **researchmap が Single Source of Truth** — エクスポートした JSONL ファイルを取り込むだけで美しい研究者サイトを自動生成
-- **高速な静的サイト (SSG)** — プリレンダリングされた HTML を返すため高速で SEO・OGP に強い
-- **マルチ言語・レスポンシブ** — 日本語 / 英語の2ページ、直近90日の新着ハイライト、タブ UI、ダークモード対応
-- **非公開データの自動保護** — 非公開・限定公開データを除外して静的 HTML を生成
-- **簡単取り込み** — `npm run import <jsonl>` 1コマンドで業績データとアバター画像を自動でセットアップ
-
 ## セットアップとデプロイ
 
 1. **Use this template** から自分のリポジトリを作成し、ローカルにクローンします。
 
-   > [!IMPORTANT]
-   > researchmap のエクスポート JSONL には連絡先等の非公開情報が含まれる場合があるため、リポジトリは **Private (非公開)** で作成してください。
+> [!IMPORTANT]
+> researchmap のエクスポート JSONL には連絡先等の非公開情報が含まれる場合があるため、リポジトリは **Private (非公開)** で作成してください。
 
    ```sh
    npm install
@@ -32,7 +24,7 @@
    npm run import /path/to/rm_researchers2026XXXX.jsonl
    ```
 
-   このコマンドにより、`data/researchmap.jsonl` への保存およびアバター画像 (`public/avatar.jpg`) の自動取得が行われます。
+   このコマンドにより、エクスポートデータから非公開・限定公開（`display !== "disclosed"`）の項目および非公開プロフィール情報が自動的に除去され、**公開データのみにサニタイズされた `data/researchmap.jsonl`** の保存とアバター画像 (`public/avatar.jpg`) の自動取得が行われます。
 
 4. **ローカルで確認する**
 
@@ -52,11 +44,23 @@
    git push
    ```
 
-7. **デプロイ (Cloudflare Pages 等の Git 連携)**
-   Cloudflare Pages や Vercel などのダッシュボードから、対象の GitHub リポジトリを選択して接続します。
+7. **デプロイ**
+
+   お好みのホスティングサービスに合わせてデプロイします。
+
+   #### Cloudflare Pages / Vercel を使う場合
+   Cloudflare Pages や Vercel のダッシュボードから、対象の GitHub リポジトリを選択して接続します。
    - **Build command**: `npm run build`
    - **Build output directory**: `dist`
    - 以降は `git push` するだけで自動でビルド・デプロイされます。
+
+   #### GitHub Pages を使う場合
+   > [!NOTE]
+   > **プライベートリポジトリと GitHub Pages の制限**  
+   > GitHub Free（無料プラン）の場合、Private リポジトリでの GitHub Pages 配信は行えません（Public リポジトリにするか、GitHub Pro 等が必要です）。なお、`npm run import` により非公開情報は自動的に除去されるため Public リポジトリでも安全に利用できます。
+
+   1. リポジトリの **Settings** > **Pages** > **Build and deployment** に移動し、**Source** を `GitHub Actions` に変更します。
+   2. `.github/workflows/deploy.yml` などのワークフローファイルを作成し、GitHub Actions で自動デプロイを構成します（詳細は [Astro 公式 GitHub Pages デプロイガイド](https://docs.astro.build/ja/guides/deploy/github/) を参照してください）。
 
 ## テンプレートの更新を取り込む方法
 
