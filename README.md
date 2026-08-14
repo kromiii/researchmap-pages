@@ -2,7 +2,15 @@
 
 [researchmap](https://researchmap.jp/) のエクスポートデータ (JSONL) から研究者向け個人サイトを生成する [Astro](https://astro.build/) テンプレートです。Cloudflare Pages、GitHub Pages、Vercel などお好みの静的ホスティングで配信できます。
 
-デモ: https://kromiii.info
+デモサイト: https://kromiii.info
+
+---
+
+## 開発の動機
+
+researchmap は業績データの管理・更新が非常に便利ですが、標準ポータルではデザインのカスタマイズ性に制約があります。
+
+**「データ管理は使い慣れた researchmap で行いつつ、個人サイトは好みのデザインや独自ドメインで自由に公開したい」** という思いから本テンプレートを作成しました。
 
 ---
 
