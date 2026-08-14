@@ -19,7 +19,7 @@ const UI = {
     lastUpdated: "最終更新",
     tabs: {
       profile: "プロフィール",
-      publications: "論文",
+      publications: "論文・著書",
       talks: "発表",
       career: "受賞・他",
     } as Record<string, string>,
@@ -30,6 +30,7 @@ const UI = {
       education: "学歴",
       awards: "受賞",
       published_papers: "論文",
+      books_etc: "書籍等出版物",
       presentations: "講演・口頭発表等",
       research_projects: "共同研究・競争的資金等の研究課題",
       association_memberships: "所属学協会",
@@ -51,6 +52,13 @@ const UI = {
       symposium: "シンポジウム",
       doctoral_thesis: "博士論文",
       master_thesis: "修士論文",
+    } as Record<string, string>,
+    bookRole: {
+      author: "著書",
+      editor: "編著",
+      contributor: "分担執筆",
+      translator: "翻訳",
+      supervisor: "監修",
     } as Record<string, string>,
   },
   en: {
@@ -74,6 +82,7 @@ const UI = {
       education: "Education",
       awards: "Awards",
       published_papers: "Publications",
+      books_etc: "Books & Publications",
       presentations: "Presentations",
       research_projects: "Research Projects",
       association_memberships: "Memberships",
@@ -96,6 +105,13 @@ const UI = {
       doctoral_thesis: "Doctoral thesis",
       master_thesis: "Master's thesis",
     } as Record<string, string>,
+    bookRole: {
+      author: "Author",
+      editor: "Editor",
+      contributor: "Contributor",
+      translator: "Translator",
+      supervisor: "Supervisor",
+    } as Record<string, string>,
   },
 };
 
@@ -109,7 +125,7 @@ export const TABS: { id: string; sections: string[] }[] = [
     id: "profile",
     sections: ["research_interests", "research_areas", "research_experience"],
   },
-  { id: "publications", sections: ["published_papers"] },
+  { id: "publications", sections: ["published_papers", "books_etc"] },
   { id: "talks", sections: ["presentations"] },
   {
     id: "career",
@@ -206,8 +222,14 @@ function makeHelpers(lang: Lang) {
     const doi = item.identifiers?.doi?.[0];
     if (doi) links.push({ href: `https://doi.org/${doi}`, label: "DOI" });
     for (const ref of item.see_also ?? []) {
-      if (ref.label === "url" && ref["@id"])
+      if (!ref["@id"]) continue;
+      if (ref.label === "cinii_books")
+        links.push({ href: ref["@id"], label: "CiNii Books" });
+      else if (ref.label === "cinii_research")
+        links.push({ href: ref["@id"], label: "CiNii Research" });
+      else if (ref.label === "url")
         links.push({ href: ref["@id"], label: "Link" });
+      else links.push({ href: ref["@id"], label: ref.label || "Link" });
     }
     return links;
   };
@@ -277,6 +299,7 @@ const TITLE_KEYS: Record<string, string> = {
   education: "affiliation",
   awards: "award_name",
   published_papers: "paper_title",
+  books_etc: "book_title",
   presentations: "presentation_title",
   research_projects: "research_project_title",
   association_memberships: "academic_society_name",
@@ -453,6 +476,32 @@ export function buildSections(
           ].filter(Boolean),
           badges,
           links: externalLinks(p),
+        };
+      }),
+    }),
+
+    books_etc: (items) => ({
+      type: "books_etc",
+      title: ui.sections.books_etc,
+      count: items.length,
+      kind: "items",
+      items: byDateDesc(items, "publication_date").map((b) => {
+        const badges: string[] = [];
+        const role = ui.bookRole?.[b.book_owner_role];
+        if (role) badges.push(role);
+        if (b.referee) badges.push(ui.refereed);
+        const metaParts = [
+          t(b.publisher),
+          b.total_page ? `(${b.total_page})` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return {
+          title: t(b.book_title),
+          sub: names(b.authors),
+          meta: [metaParts, fmtDate(b.publication_date)].filter(Boolean),
+          badges,
+          links: externalLinks(b),
         };
       }),
     }),

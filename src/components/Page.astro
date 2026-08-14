@@ -44,9 +44,13 @@ const tabViews = TABS.map((tab, i) => {
   };
 }).filter((tab) => tab.sections.length > 0);
 
-// Single-section tabs (publications / talks) show the item count on the tab.
-const tabCount = (tab: { sections: SectionView[] }) =>
-  tab.sections.length === 1 ? tab.sections[0].count : undefined;
+// Publication and talk tabs show the item count on the tab.
+const tabCount = (tab: { id: string; sections: SectionView[] }) =>
+  tab.id === "publications" || tab.id === "talks"
+    ? tab.sections.reduce((sum, s) => sum + (s.count ?? 0), 0)
+    : tab.sections.length === 1
+      ? tab.sections[0].count
+      : undefined;
 
 const base = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
