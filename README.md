@@ -4,65 +4,122 @@
 
 デモ: https://kromiii.info
 
-## セットアップとデプロイ
+---
 
-1. **Use this template** から自分のリポジトリを作成し、ローカルにクローンします。
+## セットアップとデプロイ手順
 
-   ```sh
-   npm install
-   ```
+### 1. リポジトリの作成とインストール
 
-   > [!NOTE]
-   > 取り込んだデータ (`data/researchmap.jsonl`, `public/avatar.jpg`) は `.gitignore` により Git リポジトリにはコミットされません。そのため、リポジトリ自体は Public / Private どちらでも問題なく管理できます。
+1. GitHub 右上の **「Use this template」**（または「Create a new repository」）をクリックして、ご自身のアカウントに新しいリポジトリを作成します。
+2. 作成したリポジトリをローカルにクローンし、依存パッケージをインストールします。
 
-2. **researchmap からデータをエクスポートする**
-   - researchmap にログインし、「データ管理・エクスポート」から業績データを JSONL 形式でダウンロードします。
+```sh
+git clone https://github.com/<your-username>/<your-repo-name>.git
+cd <your-repo-name>
+npm install
+```
 
-3. **データをプロジェクトに取り込む**
+> [!TIP]
+> リポジトリには初期状態でサンプルデータが含まれているため、この時点で `npm run dev` を実行するとブラウザ（`http://localhost:4321`）でデモ表示を確認できます。
 
-   ```sh
-   npm run import /path/to/rm_researchers2026XXXX.jsonl
-   ```
-
-   このコマンドにより、エクスポートデータから非公開・限定公開（`display !== "disclosed"`）の項目および非公開プロフィール情報が自動的に除去され、**公開データのみにサニタイズされた `data/researchmap.jsonl`** の保存とアバター画像 (`public/avatar.jpg`) の自動取得が行われます。
-
-4. **`astro.config.mjs` の `site` を公開 URL に変更する**
-
-   `astro.config.mjs` を開き、`site` をご自身の公開 URL（例: `https://your-site.pages.dev`）に変更します。
-
-5. **ローカルで確認する**
-
-   ```sh
-   npm run dev
-   ```
-
-   `http://localhost:4321` を開き、サイトの表示を確認します。
-
-6. **ビルドしてデプロイする**
-
-   手元で静的ビルドを行い、生成された `dist/` をローカルから直接ホスティングサービスにアップロードしてデプロイします。
-
-   #### Cloudflare Pages を使う場合（推奨）
-
-   ```sh
-   npm run build
-   npm run deploy
-   ```
-
-   _(※ `npm run deploy` は内部で `wrangler pages deploy dist` を実行します)_
-
-   - 初回実行時は Cloudflare へのログイン認証とプロジェクト名の指定が案内されます（事前に `npx wrangler pages project create <プロジェクト名>` で作成しておくことも可能です）。
-   - Cloudflare のダッシュボードにある「Pages」>「Direct Upload（直接アップロード）」から `dist/` フォルダをドラッグ＆ドロップしてデプロイすることもできます。
-
-   #### その他のホスティングサービスを使う場合
-
-   手元で `npm run build` を実行後、生成された `dist/` ディレクトリを各サービスの CLI または管理画面からアップロードします。
-
-   - **Netlify**: `npx netlify deploy --prod --dir=dist`（または管理画面で `dist` をドラッグ＆ドロップ）
-   - **Vercel**: `npx vercel --prod`
-   - **AWS S3 / 各種静的ホスティング**: `dist/` 配下の静的ファイルを同期・アップロード
+> [!NOTE]
+> 取り込んだデータ (`data/researchmap.jsonl`, `public/avatar.jpg`) は `.gitignore` により Git リポジトリにはコミットされません。そのため、リポジトリ自体は Public / Private どちらでも安全に管理できます。
 
 ---
+
+### 2. researchmap からデータをエクスポートする
+
+1. [researchmap](https://researchmap.jp/) にログインします。
+2. 右上の設定・管理メニューから **「データ管理・エクスポート」** を開きます。
+3. **「エクスポート」** タブを開き、データ形式として **JSONL** を選択してダウンロードします（`rm_researchersYYYYMMDD_XXXXXX.jsonl` のようなファイルが保存されます）。
+
+---
+
+### 3. データをプロジェクトに取り込む
+
+ダウンロードした JSONL ファイルのパスを指定してインポートコマンドを実行します。
+
+```sh
+npm run import /path/to/rm_researchersYYYYMMDD_XXXXXX.jsonl
+```
+
+- **自動サニタイズ**: 非公開・限定公開（`display !== "disclosed"`）の項目および非公開プロフィール情報を自動で除外した公開専用データ `data/researchmap.jsonl` を生成・保存します。
+- **アバター画像の自動取得**: researchmap にプロフィール画像が登録されている場合、自動で `public/avatar.jpg` にダウンロードされます。（※未登録の場合や別の画像を使いたい場合は、正方形の画像ファイルを `public/avatar.jpg` に手動配置してください）
+
+---
+
+### 4. 設定ファイルを変更する
+
+ご自身の公開環境に合わせて以下の設定ファイルを編集します。
+
+#### ① `wrangler.json` (Cloudflare Pages プロジェクト名)
+
+Cloudflare Pages を利用する場合、プロジェクト名を任意の名前に変更します（英数字とハイフン）。
+※ この名前が初期の公開 URL（`https://<name>.pages.dev`）になります。
+
+```json
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "your-project-name",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-08-14"
+}
+```
+
+#### ② `astro.config.mjs` (サイト公開 URL)
+
+OGP画像や正規化URL（`canonical`）のメタタグ生成に使用される `site` URL を、ご自身の公開 URL に変更します。
+
+```js
+import { defineConfig } from "astro/config";
+
+export default defineConfig({
+  site: "https://your-project-name.pages.dev", // または独自ドメイン
+  output: "static",
+});
+```
+
+---
+
+### 5. ローカルで確認する
+
+```sh
+npm run dev
+```
+
+ブラウザで `http://localhost:4321` を開き、自身のプロフィールや業績データが正しく反映されているか確認します。
+
+---
+
+### 6. ビルドしてデプロイする
+
+ローカルで静的ビルドを行い、生成された `dist/` ディレクトリをホスティングサービスにデプロイします。
+
+#### Cloudflare Pages を使う場合（推奨）
+
+```sh
+npm run build
+npm run deploy
+```
+
+_(※ `npm run deploy` は内部で `wrangler pages deploy dist` を実行します)_
+
+- **初回実行時**: ブラウザで Cloudflare へのログイン認証画面が開きます。認証完了後、`wrangler.json` で指定したプロジェクト宛にデプロイ・公開されます。
+- 事前に CLI でプロジェクトを作成しておく場合は `npx wrangler pages project create <プロジェクト名>` を実行できます。
+- Cloudflare ダッシュボードの「Pages」>「Direct Upload（直接アップロード）」から `dist/` フォルダをドラッグ＆ドロップしてデプロイすることも可能です。
+
+#### その他のホスティングサービスを使う場合
+
+手元で `npm run build` を実行後、生成された `dist/` ディレクトリを各サービスの CLI または管理画面からアップロードします。
+
+- **Netlify**: `npx netlify deploy --prod --dir=dist`（または管理画面で `dist` をドラッグ＆ドロップ）
+- **Vercel**: `npx vercel --prod`
+- **GitHub Pages**: `dist` の内容を `gh-pages` ブランチ等にデプロイ
+  _(※ サブディレクトリ `https://<user>.github.io/<repo>/` で公開する場合は、`astro.config.mjs` に `base: "/<repo>"` を設定してください)_
+
+---
+
+## 応用・カスタマイズ
 
 ### 独自ドメイン（カスタムドメイン）の設定方法
 
@@ -97,10 +154,18 @@
 researchmap で業績を更新した際は、エクスポートした新しい JSONL ファイルを使って再度取り込みとデプロイを行うだけでサイトが更新されます。
 
 ```sh
-npm run import /path/to/rm_researchers2026XXXX.jsonl
+npm run import /path/to/rm_researchersYYYYMMDD_XXXXXX.jsonl
 npm run build
 npm run deploy
 ```
+
+---
+
+### アバター画像の変更
+
+researchmap に写真が登録されていない場合や、別の写真・イラストを使用したい場合は、正方形の画像ファイルを `public/avatar.jpg` に配置してビルド・デプロイしてください。
+
+---
 
 ## テンプレートの更新を取り込む方法
 
@@ -120,6 +185,21 @@ npm run deploy
    ```
 
    _(※ 2回目以降のマージは `--allow-unrelated-histories` オプションなしの `git merge upstream/main` のみでマージ可能です。)_
+
+---
+
+## 主な npm コマンド一覧
+
+| コマンド                          | 説明                                                 |
+| :-------------------------------- | :--------------------------------------------------- |
+| `npm run dev`                     | ローカル開発サーバーを起動 (`http://localhost:4321`) |
+| `npm run import <file>`           | researchmap の JSONL データをサニタイズして取り込み  |
+| `npm run build`                   | 本番用静的ファイルを `dist/` にビルド                |
+| `npm run preview`                 | ビルド成果物 (`dist/`) をローカルでプレビュー        |
+| `npm run deploy`                  | Cloudflare Pages に `dist/` をデプロイ (`wrangler`)  |
+| `npm run lint` / `npm run format` | コードの Lint / フォーマットチェック・整形           |
+
+---
 
 ## License
 
