@@ -8,12 +8,12 @@
 
 1. **Use this template** から自分のリポジトリを作成し、ローカルにクローンします。
 
-> [!IMPORTANT]
-> researchmap のエクスポート JSONL には連絡先等の非公開情報が含まれる場合があるため、リポジトリは **Private (非公開)** で作成することをおすすめします。
-
    ```sh
    npm install
    ```
+
+   > [!NOTE]
+   > 取り込んだデータ (`data/researchmap.jsonl`, `public/avatar.jpg`) は `.gitignore` により Git リポジトリにはコミットされません。そのため、リポジトリ自体は Public / Private どちらでも問題なく管理できます。
 
 2. **researchmap からデータをエクスポートする**
    - researchmap にログインし、「データ管理・エクスポート」から業績データを JSONL 形式でダウンロードします。
@@ -26,41 +26,81 @@
 
    このコマンドにより、エクスポートデータから非公開・限定公開（`display !== "disclosed"`）の項目および非公開プロフィール情報が自動的に除去され、**公開データのみにサニタイズされた `data/researchmap.jsonl`** の保存とアバター画像 (`public/avatar.jpg`) の自動取得が行われます。
 
-4. **ローカルで確認する**
+4. **`astro.config.mjs` の `site` を公開 URL に変更する**
+
+   `astro.config.mjs` を開き、`site` をご自身の公開 URL（例: `https://your-site.pages.dev`）に変更します。
+
+5. **ローカルで確認する**
 
    ```sh
    npm run dev
    ```
 
-   `http://localhost:4321` を開き、サイトを確認します。
+   `http://localhost:4321` を開き、サイトの表示を確認します。
 
-5. **`astro.config.mjs` の `site` を公開 URL に変更する**
+6. **ビルドしてデプロイする**
 
-6. **データをコミットして push する**
+   手元で静的ビルドを行い、生成された `dist/` をローカルから直接ホスティングサービスにアップロードしてデプロイします。
+
+   #### Cloudflare Pages を使う場合（推奨）
 
    ```sh
-   git add -f data/researchmap.jsonl public/avatar.jpg
-   git commit -m "Add researchmap data"
-   git push
+   npm run build
+   npm run deploy
    ```
 
-7. **デプロイ**
+   _(※ `npm run deploy` は内部で `wrangler pages deploy dist` を実行します)_
 
-   お好みのホスティングサービスに合わせてデプロイします。
+   - 初回実行時は Cloudflare へのログイン認証とプロジェクト名の指定が案内されます（事前に `npx wrangler pages project create <プロジェクト名>` で作成しておくことも可能です）。
+   - Cloudflare のダッシュボードにある「Pages」>「Direct Upload（直接アップロード）」から `dist/` フォルダをドラッグ＆ドロップしてデプロイすることもできます。
 
-   #### Cloudflare Pages / Vercel を使う場合
-   Cloudflare Pages や Vercel のダッシュボードから、対象の GitHub リポジトリを選択して接続します。
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-   - 以降は `git push` するだけで自動でビルド・デプロイされます。
+   #### その他のホスティングサービスを使う場合
 
-   #### GitHub Pages を使う場合
-   > [!NOTE]
-   > **プライベートリポジトリと GitHub Pages の制限**  
-   > GitHub Free（無料プラン）の場合、Private リポジトリでの GitHub Pages 配信は行えません（Public リポジトリにするか、GitHub Pro 等が必要です）。
+   手元で `npm run build` を実行後、生成された `dist/` ディレクトリを各サービスの CLI または管理画面からアップロードします。
 
-   1. リポジトリの **Settings** > **Pages** > **Build and deployment** に移動し、**Source** を `GitHub Actions` に変更します。
-   2. `.github/workflows/deploy.yml` などのワークフローファイルを作成し、GitHub Actions で自動デプロイを構成します（詳細は [Astro 公式 GitHub Pages デプロイガイド](https://docs.astro.build/ja/guides/deploy/github/) を参照してください）。
+   - **Netlify**: `npx netlify deploy --prod --dir=dist`（または管理画面で `dist` をドラッグ＆ドロップ）
+   - **Vercel**: `npx vercel --prod`
+   - **AWS S3 / 各種静的ホスティング**: `dist/` 配下の静的ファイルを同期・アップロード
+
+---
+
+### 独自ドメイン（カスタムドメイン）の設定方法
+
+1. **`astro.config.mjs` の `site` を独自ドメインに変更する**
+
+   ```js
+   export default defineConfig({
+     site: "https://your-domain.com", // 独自ドメインを指定
+     output: "static",
+   });
+   ```
+
+2. **Cloudflare Pages でドメインを設定する**
+   - Cloudflare ダッシュボードで対象の Pages プロジェクトを開きます。
+   - **「Custom domains（カスタムドメイン）」** タブ > **「Set up a custom domain（カスタムドメインを設定）」** をクリックします。
+   - 設定したいドメイン名（例: `your-domain.com` や `sub.your-domain.com`）を入力します。
+   - **DNS 設定**:
+     - Cloudflare でドメインを管理している場合は、DNS レコードが自動追加されます。
+     - 他社（お名前.com, Route 53 等）で管理している場合は、指示に従って `xxx.pages.dev` への CNAME レコードを DNS に登録します。
+   - SSL 証明書は Cloudflare により自動で即時発行されます。
+
+3. **再ビルドしてデプロイする**
+   ```sh
+   npm run build
+   npm run deploy
+   ```
+
+---
+
+### 業績データの更新方法
+
+researchmap で業績を更新した際は、エクスポートした新しい JSONL ファイルを使って再度取り込みとデプロイを行うだけでサイトが更新されます。
+
+```sh
+npm run import /path/to/rm_researchers2026XXXX.jsonl
+npm run build
+npm run deploy
+```
 
 ## テンプレートの更新を取り込む方法
 
@@ -80,17 +120,6 @@
    ```
 
    _(※ 2回目以降のマージは `--allow-unrelated-histories` オプションなしの `git merge upstream/main` のみでマージ可能です。)_
-
-## 主なファイル
-
-| ファイル                        | 役割                                               |
-| ------------------------------- | -------------------------------------------------- |
-| `scripts/import.mjs`            | JSONL エクスポートファイルの取り込み・アバター取得 |
-| `data/researchmap.jsonl`        | 取り込まれた研究者データ (JSONL・Git非追跡)        |
-| `data/researchmap.sample.jsonl` | テンプレート動作確認用サンプルデータ               |
-| `src/lib/researchmap.ts`        | JSONL パースおよび研究者データのロード             |
-| `src/lib/view.ts`               | 表示用データへの変換・タブ構成・新着抽出           |
-| `src/components/Page.astro`     | ページ本体のテンプレートとタブ切り替え             |
 
 ## License
 

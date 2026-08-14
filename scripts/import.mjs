@@ -54,9 +54,7 @@ async function main() {
       srcFile = targetJsonl;
       console.log(`No input file provided. Using existing ${targetJsonl}`);
     } else {
-      console.error(
-        "Usage: npm run import <path-to-researchmap-export.jsonl>",
-      );
+      console.error("Usage: npm run import <path-to-researchmap-export.jsonl>");
       process.exit(1);
     }
   }
@@ -153,4 +151,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

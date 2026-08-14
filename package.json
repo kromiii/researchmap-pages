@@ -7,17 +7,16 @@
     "import": "node scripts/import.mjs",
     "build": "astro build",
     "preview": "astro preview",
+    "deploy": "wrangler pages deploy dist",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.5",
     "astro": "^7.1.4"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260727.1",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
