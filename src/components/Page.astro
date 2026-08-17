@@ -60,9 +60,42 @@ const base = import.meta.env.BASE_URL.endsWith("/")
 const path = lang === "ja" ? "" : "en/";
 const title = pageTitle(profile, lang);
 const description = [hero.name, ...hero.affiliations].join(" — ");
+
+const abs = (p: string) =>
+  Astro.site ? new URL(base + p, Astro.site).href : undefined;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  mainEntity: {
+    "@type": "Person",
+    name: hero.name,
+    ...(hero.altName
+      ? { alternateName: hero.altName.split(" / ").filter(Boolean) }
+      : {}),
+    ...(hero.affiliations[0] ? { jobTitle: hero.affiliations[0] } : {}),
+    ...(hero.affiliations[0]
+      ? {
+          worksFor: {
+            "@type": "Organization",
+            name: hero.affiliations[0],
+          },
+        }
+      : {}),
+    ...(hero.links.length > 0 ? { sameAs: hero.links.map((l) => l.href) } : {}),
+    description,
+    ...(abs("avatar.jpg") ? { image: abs("avatar.jpg") } : {}),
+  },
+};
 ---
 
-<Base lang={lang} title={title} description={description} path={path}>
+<Base
+  lang={lang}
+  title={title}
+  description={description}
+  path={path}
+  jsonLd={jsonLd}
+>
   {
     enableEn && (
       <header class="site-header">
@@ -70,13 +103,25 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
           {hero.name}
         </a>
         <nav class="lang-switch" aria-label="Language">
-          <a href={base} class={lang === "ja" ? "active" : ""}>
+          <a
+            href={base}
+            class={lang === "ja" ? "active" : ""}
+            aria-current={lang === "ja" ? "page" : undefined}
+            lang="ja"
+            hreflang="ja"
+          >
             日本語
           </a>
           <span class="lang-divider" aria-hidden="true">
             /
           </span>
-          <a href={`${base}en/`} class={lang === "en" ? "active" : ""}>
+          <a
+            href={`${base}en/`}
+            class={lang === "en" ? "active" : ""}
+            aria-current={lang === "en" ? "page" : undefined}
+            lang="en"
+            hreflang="en"
+          >
             English
           </a>
         </nav>
@@ -84,12 +129,15 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
     )
   }
 
-  <main>
+  <main id="main">
     <section class="hero" id="about">
       <img
         src={`${base}avatar.jpg`}
-        alt=""
-        onerror="this.style.display='none'"
+        alt={hero.name}
+        width="96"
+        height="96"
+        loading="eager"
+        decoding="async"
       />
       <div class="hero-body">
         <h1>{hero.name}</h1>
@@ -101,6 +149,9 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
             hero.links.map((l) => (
               <a href={l.href} target="_blank" rel="noopener">
                 {l.label}
+                <span class="sr-only">
+                  ({lang === "ja" ? "新しいタブで開く" : "opens in a new tab"})
+                </span>
               </a>
             ))
           }
@@ -136,6 +187,7 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
             id={`tab-${tab.id}`}
             aria-controls={`panel-${tab.id}`}
             aria-selected={i === 0 ? "true" : "false"}
+            tabindex={i === 0 ? 0 : -1}
             data-tab={tab.id}
           >
             {tab.label}
@@ -201,6 +253,13 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
                         {it.links.map((l) => (
                           <a href={l.href} target="_blank" rel="noopener">
                             {l.label}
+                            <span class="sr-only">
+                              (
+                              {lang === "ja"
+                                ? "新しいタブで開く"
+                                : "opens in a new tab"}
+                              )
+                            </span>
                           </a>
                         ))}
                       </div>
@@ -224,6 +283,9 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
         rel="noopener"
       >
         researchmap.jp/{profile.permalink}
+        <span class="sr-only">
+          ({lang === "ja" ? "新しいタブで開く" : "opens in a new tab"})
+        </span>
       </a>
       {
         updatedDate && (
@@ -237,20 +299,30 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
 </Base>
 
 <script>
-  // Progressive enhancement: without JS every panel stays visible.
-  document.documentElement.classList.add("js");
-
   const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-tab]")];
   const panels = [
     ...document.querySelectorAll<HTMLElement>("[data-tab-panel]"),
   ];
+  const tabList = document.querySelector<HTMLElement>('[role="tablist"]');
+
+  // Graceful avatar error handling (CSP compliant)
+  const avatar = document.querySelector<HTMLImageElement>(".hero img");
+  if (avatar) {
+    avatar.addEventListener("error", () => {
+      avatar.style.display = "none";
+    });
+  }
 
   function activate(id: string, updateHash: boolean) {
     if (!panels.some((p) => p.dataset.tabPanel === id)) return;
-    for (const tab of tabs)
-      tab.setAttribute("aria-selected", String(tab.dataset.tab === id));
-    for (const panel of panels)
+    for (const tab of tabs) {
+      const isSelected = tab.dataset.tab === id;
+      tab.setAttribute("aria-selected", String(isSelected));
+      tab.setAttribute("tabindex", isSelected ? "0" : "-1");
+    }
+    for (const panel of panels) {
       panel.classList.toggle("active", panel.dataset.tabPanel === id);
+    }
     if (updateHash) history.replaceState(null, "", `#${id}`);
   }
 
@@ -263,6 +335,30 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
         bar.scrollIntoView({ behavior: "smooth" });
     });
   }
+
+  // WAI-ARIA keyboard navigation for tablist
+  tabList?.addEventListener("keydown", (e: KeyboardEvent) => {
+    const target = e.target as HTMLButtonElement;
+    const index = tabs.indexOf(target);
+    if (index === -1) return;
+
+    let nextIndex = -1;
+    if (e.key === "ArrowRight") {
+      nextIndex = (index + 1) % tabs.length;
+    } else if (e.key === "ArrowLeft") {
+      nextIndex = (index - 1 + tabs.length) % tabs.length;
+    } else if (e.key === "Home") {
+      nextIndex = 0;
+    } else if (e.key === "End") {
+      nextIndex = tabs.length - 1;
+    }
+
+    if (nextIndex !== -1) {
+      e.preventDefault();
+      tabs[nextIndex].focus();
+      tabs[nextIndex].click();
+    }
+  });
 
   // Deep links: #publications opens the tab; #published_papers (a section id)
   // opens the tab containing that section and scrolls to it.

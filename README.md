@@ -68,14 +68,16 @@ Cloudflare Pages を利用する場合、プロジェクト名を任意の名前
 
 #### ② `astro.config.mjs` (サイト公開 URL)
 
-OGP画像や正規化URL（`canonical`）のメタタグ生成に使用される `site` URL を、ご自身の公開 URL に変更します。
+OGP画像や正規化URL（`canonical`）、サイトマップ生成に使用される `site` URL を、ご自身の公開 URL に変更します。
 
 ```js
 import { defineConfig } from "astro/config";
+import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://your-project-name.pages.dev", // または独自ドメイン
   output: "static",
+  integrations: [sitemap()],
 });
 ```
 
@@ -126,9 +128,13 @@ _(※ `npm run deploy` は内部で `wrangler pages deploy dist` を実行しま
 1. **`astro.config.mjs` の `site` を独自ドメインに変更する**
 
    ```js
+   import { defineConfig } from "astro/config";
+   import sitemap from "@astrojs/sitemap";
+
    export default defineConfig({
      site: "https://your-domain.com", // 独自ドメインを指定
      output: "static",
+     integrations: [sitemap()],
    });
    ```
 
@@ -161,9 +167,10 @@ npm run deploy
 
 ---
 
-### アバター画像の変更
+### アバター画像・ファビコン（アイコン）の変更
 
-researchmap に写真が登録されていない場合や、別の写真・イラストを使用したい場合は、正方形の画像ファイルを `public/avatar.jpg` に配置してビルド・デプロイしてください。
+- **アバター画像**: researchmap に写真が登録されていない場合や、別の写真・イラストを使用したい場合は、正方形の画像ファイルを `public/avatar.jpg` に配置してビルド・デプロイしてください。
+- **ファビコン（アイコン）**: デフォルトで学術・書籍をモチーフにしたダークモード対応の汎用 SVG アイコン（`public/favicon.svg`）が設定されています。オリジナルのアイコンに変更したい場合は、`public/favicon.svg` をお好みの画像・SVG ファイルに置き換えてください。
 
 ---
 

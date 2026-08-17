@@ -7,9 +7,10 @@ interface Props {
   title: string;
   description: string;
   path: string; // base-relative path of this page, e.g. "" or "en/"
+  jsonLd?: Record<string, unknown>;
 }
 
-const { lang, title, description, path } = Astro.props;
+const { lang, title, description, path, jsonLd } = Astro.props;
 const enableEn = isEnglishEnabled();
 const base = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
@@ -21,10 +22,14 @@ const abs = (p: string) =>
 <!doctype html>
 <html lang={lang}>
   <head>
+    <script is:inline>
+      document.documentElement.classList.add("js");
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
     {abs(path) && <link rel="canonical" href={abs(path)} />}
     {
       enableEn && abs("") && (
@@ -36,16 +41,39 @@ const abs = (p: string) =>
         <link rel="alternate" hreflang="en" href={abs("en/")} />
       )
     }
+    {
+      enableEn && abs("") && (
+        <link rel="alternate" hreflang="x-default" href={abs("")} />
+      )
+    }
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="profile" />
+    {abs(path) && <meta property="og:url" content={abs(path)} />}
+    <meta property="og:locale" content={lang === "ja" ? "ja_JP" : "en_US"} />
     {
       abs("avatar.jpg") && (
         <meta property="og:image" content={abs("avatar.jpg")} />
       )
     }
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {
+      abs("avatar.jpg") && (
+        <meta name="twitter:image" content={abs("avatar.jpg")} />
+      )
+    }
+    {
+      jsonLd && (
+        <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+      )
+    }
   </head>
   <body>
+    <a href="#about" class="skip-link">
+      {lang === "ja" ? "メインコンテンツへスキップ" : "Skip to main content"}
+    </a>
     <slot />
   </body>
 </html>
