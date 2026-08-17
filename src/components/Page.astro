@@ -69,14 +69,17 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
         <a class="brand" href={base}>
           {hero.name}
         </a>
-        <div class="lang-switch" role="group" aria-label="Language">
+        <nav class="lang-switch" aria-label="Language">
           <a href={base} class={lang === "ja" ? "active" : ""}>
             日本語
           </a>
+          <span class="lang-divider" aria-hidden="true">
+            /
+          </span>
           <a href={`${base}en/`} class={lang === "en" ? "active" : ""}>
             English
           </a>
-        </div>
+        </nav>
       </header>
     )
   }

@@ -224,17 +224,30 @@ function makeHelpers(lang: Lang) {
 
   const externalLinks = (item: any): { href: string; label: string }[] => {
     const links: { href: string; label: string }[] = [];
+    const seen = new Set<string>();
+    const add = (href: string, label: string) => {
+      const norm = href.toLowerCase().replace(/\/$/, "");
+      if (seen.has(norm)) return;
+      seen.add(norm);
+      links.push({ href, label });
+    };
+
     const doi = item.identifiers?.doi?.[0];
-    if (doi) links.push({ href: `https://doi.org/${doi}`, label: "DOI" });
+    if (doi) add(`https://doi.org/${doi}`, "DOI");
     for (const ref of item.see_also ?? []) {
       if (!ref["@id"]) continue;
-      if (ref.label === "cinii_books")
-        links.push({ href: ref["@id"], label: "CiNii Books" });
+      if (ref.label === "cinii_books") add(ref["@id"], "CiNii Books");
       else if (ref.label === "cinii_research")
-        links.push({ href: ref["@id"], label: "CiNii Research" });
-      else if (ref.label === "url")
-        links.push({ href: ref["@id"], label: "Link" });
-      else links.push({ href: ref["@id"], label: ref.label || "Link" });
+        add(ref["@id"], "CiNii Research");
+      else if (ref.label === "cinii_articles") add(ref["@id"], "CiNii");
+      else if (ref.label === "doi") add(ref["@id"], "DOI");
+      else if (ref.label === "url") add(ref["@id"], "Link");
+      else if (ref.label === "scopus" || ref.label === "scopus_citedby")
+        add(ref["@id"], "Scopus");
+      else if (ref.label === "web_of_science")
+        add(ref["@id"], "Web of Science");
+      else if (ref.label === "dblp") add(ref["@id"], "DBLP");
+      else add(ref["@id"], ref.label || "Link");
     }
     return links;
   };
