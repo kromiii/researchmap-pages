@@ -63,10 +63,12 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
 ---
 
 <Base lang={lang} title={title} description={description} path={path}>
-  <header class="site-header">
-    <a class="brand" href={base}>{hero.name}</a>
-    {
-      enableEn && (
+  {
+    enableEn && (
+      <header class="site-header">
+        <a class="brand" href={base}>
+          {hero.name}
+        </a>
         <div class="lang-switch" role="group" aria-label="Language">
           <a href={base} class={lang === "ja" ? "active" : ""}>
             日本語
@@ -75,9 +77,9 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
             English
           </a>
         </div>
-      )
-    }
-  </header>
+      </header>
+    )
+  }
 
   <main>
     <section class="hero" id="about">
