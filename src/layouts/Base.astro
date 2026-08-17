@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { isEnglishEnabled } from "../lib/config";
 
 interface Props {
   lang: "ja" | "en";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const { lang, title, description, path } = Astro.props;
+const enableEn = isEnglishEnabled();
 const base = import.meta.env.BASE_URL.endsWith("/")
   ? import.meta.env.BASE_URL
   : `${import.meta.env.BASE_URL}/`;
@@ -24,8 +26,16 @@ const abs = (p: string) =>
     <title>{title}</title>
     <meta name="description" content={description} />
     {abs(path) && <link rel="canonical" href={abs(path)} />}
-    {abs("") && <link rel="alternate" hreflang="ja" href={abs("")} />}
-    {abs("en/") && <link rel="alternate" hreflang="en" href={abs("en/")} />}
+    {
+      enableEn && abs("") && (
+        <link rel="alternate" hreflang="ja" href={abs("")} />
+      )
+    }
+    {
+      enableEn && abs("en/") && (
+        <link rel="alternate" hreflang="en" href={abs("en/")} />
+      )
+    }
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="profile" />

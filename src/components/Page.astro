@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { getResearcher } from "../lib/researchmap";
+import { isEnglishEnabled } from "../lib/config";
 import {
   buildHero,
   buildRecentUpdates,
@@ -20,6 +21,7 @@ interface Props {
 const { lang } = Astro.props;
 const { profile, sections } = await getResearcher();
 
+const enableEn = isEnglishEnabled();
 const ui = uiStrings(lang);
 const hero = buildHero(profile, lang);
 const sectionViews = buildSections(sections, lang);
@@ -63,10 +65,18 @@ const description = [hero.name, ...hero.affiliations].join(" — ");
 <Base lang={lang} title={title} description={description} path={path}>
   <header class="site-header">
     <a class="brand" href={base}>{hero.name}</a>
-    <div class="lang-switch" role="group" aria-label="Language">
-      <a href={base} class={lang === "ja" ? "active" : ""}>日本語</a>
-      <a href={`${base}en/`} class={lang === "en" ? "active" : ""}>English</a>
-    </div>
+    {
+      enableEn && (
+        <div class="lang-switch" role="group" aria-label="Language">
+          <a href={base} class={lang === "ja" ? "active" : ""}>
+            日本語
+          </a>
+          <a href={`${base}en/`} class={lang === "en" ? "active" : ""}>
+            English
+          </a>
+        </div>
+      )
+    }
   </header>
 
   <main>

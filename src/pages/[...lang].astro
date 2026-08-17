@@ -1,0 +1,24 @@
+---
+import Page from "../components/Page.astro";
+import { isEnglishEnabled } from "../lib/config";
+import type { Lang } from "../lib/view";
+
+export function getStaticPaths() {
+  const paths: {
+    params: { lang: string | undefined };
+    props: { lang: Lang };
+  }[] = [{ params: { lang: undefined }, props: { lang: "ja" } }];
+  if (isEnglishEnabled()) {
+    paths.push({ params: { lang: "en" }, props: { lang: "en" } });
+  }
+  return paths;
+}
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<Page lang={lang} />

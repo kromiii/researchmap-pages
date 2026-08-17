@@ -193,10 +193,14 @@ export interface HeroView {
 function makeHelpers(lang: Lang) {
   const ui = UI[lang];
 
-  const t = (value: any): string => {
+  const t = (value: any, allowFallback = lang === "ja"): string => {
     if (value == null) return "";
     if (typeof value === "string") return value;
-    return value[lang] ?? value.ja ?? value.en ?? Object.values(value)[0] ?? "";
+    if (lang === "en") {
+      if (value.en) return value.en;
+      return allowFallback ? (value.ja ?? Object.values(value)[0] ?? "") : "";
+    }
+    return value.ja ?? value.en ?? Object.values(value)[0] ?? "";
   };
 
   const fmtDate = (s?: string): string => {
@@ -209,7 +213,8 @@ function makeHelpers(lang: Lang) {
     !from && !to ? "" : `${fmtDate(from)} – ${fmtDate(to)}`;
 
   const names = (value: any): string => {
-    const list = t(value);
+    const list =
+      lang === "en" ? (value?.en ?? value?.ja) : (value?.ja ?? value?.en);
     if (!Array.isArray(list)) return "";
     return list
       .map((p: any) => p.name)
@@ -253,9 +258,21 @@ export function buildHero(profile: any, lang: Lang): HeroView {
   const enName =
     `${profile.given_name?.en ?? ""} ${profile.family_name?.en ?? ""}`.trim();
 
-  const affiliations = (profile.affiliations ?? []).map((a: any) =>
-    [t(a.affiliation), t(a.section), t(a.job)].filter(Boolean).join(" "),
-  );
+  let affiliations = (profile.affiliations ?? [])
+    .map((a: any) =>
+      [t(a.affiliation), t(a.section), t(a.job)].filter(Boolean).join(" "),
+    )
+    .filter(Boolean);
+
+  if (affiliations.length === 0 && lang === "en") {
+    affiliations = (profile.affiliations ?? [])
+      .map((a: any) =>
+        [t(a.affiliation, true), t(a.section, true), t(a.job, true)]
+          .filter(Boolean)
+          .join(" "),
+      )
+      .filter(Boolean);
+  }
 
   const links = [
     {
@@ -274,9 +291,13 @@ export function buildHero(profile: any, lang: Lang): HeroView {
   }
 
   return {
-    name: lang === "ja" ? jaName : enName,
+    name: lang === "ja" ? jaName || enName : enName || jaName,
     altName:
-      lang === "ja" ? [kanaName, enName].filter(Boolean).join(" / ") : jaName,
+      lang === "ja"
+        ? [kanaName, enName].filter(Boolean).join(" / ")
+        : jaName !== enName
+          ? jaName
+          : "",
     affiliations,
     bioHtml: t(profile.profile),
     links,
@@ -396,65 +417,95 @@ export function buildSections(
   const { ui, t, fmtDate, period, names, externalLinks, byDateDesc } = h;
 
   const builders: Record<string, (items: any[]) => SectionView | null> = {
-    research_interests: (items) => ({
-      type: "research_interests",
-      title: ui.sections.research_interests,
-      kind: "chips",
-      chips: items.map((it) => t(it.keyword)),
-    }),
+    research_interests: (items) => {
+      const chips = items.map((it) => t(it.keyword)).filter(Boolean);
+      if (chips.length === 0) return null;
+      return {
+        type: "research_interests",
+        title: ui.sections.research_interests,
+        kind: "chips",
+        chips,
+      };
+    },
 
-    research_areas: (items) => ({
-      type: "research_areas",
-      title: ui.sections.research_areas,
-      kind: "chips",
-      chips: items.map((it) => `${t(it.discipline)} / ${t(it.research_field)}`),
-    }),
+    research_areas: (items) => {
+      const chips = items
+        .map((it) => {
+          const d = t(it.discipline);
+          const f = t(it.research_field);
+          if (!d && !f) return "";
+          return [d, f].filter(Boolean).join(" / ");
+        })
+        .filter(Boolean);
+      if (chips.length === 0) return null;
+      return {
+        type: "research_areas",
+        title: ui.sections.research_areas,
+        kind: "chips",
+        chips,
+      };
+    },
 
-    research_experience: (items) => ({
-      type: "research_experience",
-      title: ui.sections.research_experience,
-      count: items.length,
-      kind: "rows",
-      rows: byDateDesc(items, "from_date").map((it) => ({
+    research_experience: (items) => {
+      const filtered = items.filter((it) => t(it.affiliation) || t(it.job));
+      if (filtered.length === 0) return null;
+      const rows = byDateDesc(filtered, "from_date").map((it) => ({
         period: period(it.from_date, it.to_date),
         main: [t(it.affiliation), t(it.section)].filter(Boolean).join(" "),
         sub: t(it.job),
-      })),
-    }),
+      }));
+      return {
+        type: "research_experience",
+        title: ui.sections.research_experience,
+        count: rows.length,
+        kind: "rows",
+        rows,
+      };
+    },
 
-    education: (items) => ({
-      type: "education",
-      title: ui.sections.education,
-      count: items.length,
-      kind: "rows",
-      rows: byDateDesc(items, "from_date").map((it) => ({
+    education: (items) => {
+      const filtered = items.filter(
+        (it) => t(it.affiliation) || t(it.department) || t(it.course),
+      );
+      if (filtered.length === 0) return null;
+      const rows = byDateDesc(filtered, "from_date").map((it) => ({
         period: period(it.from_date, it.to_date),
         main: [t(it.affiliation), t(it.department)].filter(Boolean).join(" "),
         sub: t(it.course),
-      })),
-    }),
+      }));
+      return {
+        type: "education",
+        title: ui.sections.education,
+        count: rows.length,
+        kind: "rows",
+        rows,
+      };
+    },
 
-    awards: (items) => ({
-      type: "awards",
-      title: ui.sections.awards,
-      count: items.length,
-      kind: "items",
-      items: byDateDesc(items, "award_date").map((a) => ({
+    awards: (items) => {
+      const filtered = items.filter((a) => t(a.award_name));
+      if (filtered.length === 0) return null;
+      const itemViews = byDateDesc(filtered, "award_date").map((a) => ({
         title: t(a.award_name),
-        meta: [t(a.association), fmtDate(a.award_date)].filter(Boolean),
+        meta: [t(a.association, true), fmtDate(a.award_date)].filter(Boolean),
         badges: [],
         links: [],
-      })),
-    }),
+      }));
+      return {
+        type: "awards",
+        title: ui.sections.awards,
+        count: itemViews.length,
+        kind: "items",
+        items: itemViews,
+      };
+    },
 
-    published_papers: (items) => ({
-      type: "published_papers",
-      title: ui.sections.published_papers,
-      count: items.length,
-      kind: "items",
-      items: byDateDesc(items, "publication_date").map((p) => {
+    published_papers: (items) => {
+      const filtered = items.filter((p) => t(p.paper_title));
+      if (filtered.length === 0) return null;
+      const itemViews = byDateDesc(filtered, "publication_date").map((p) => {
         const journal = [
-          t(p.publication_name),
+          t(p.publication_name, true),
           p.volume,
           p.number ? `(${p.number})` : "",
         ]
@@ -477,21 +528,26 @@ export function buildSections(
           badges,
           links: externalLinks(p),
         };
-      }),
-    }),
+      });
+      return {
+        type: "published_papers",
+        title: ui.sections.published_papers,
+        count: itemViews.length,
+        kind: "items",
+        items: itemViews,
+      };
+    },
 
-    books_etc: (items) => ({
-      type: "books_etc",
-      title: ui.sections.books_etc,
-      count: items.length,
-      kind: "items",
-      items: byDateDesc(items, "publication_date").map((b) => {
+    books_etc: (items) => {
+      const filtered = items.filter((b) => t(b.book_title));
+      if (filtered.length === 0) return null;
+      const itemViews = byDateDesc(filtered, "publication_date").map((b) => {
         const badges: string[] = [];
         const role = ui.bookRole?.[b.book_owner_role];
         if (role) badges.push(role);
         if (b.referee) badges.push(ui.refereed);
         const metaParts = [
-          t(b.publisher),
+          t(b.publisher, true),
           b.total_page ? `(${b.total_page})` : "",
         ]
           .filter(Boolean)
@@ -503,15 +559,20 @@ export function buildSections(
           badges,
           links: externalLinks(b),
         };
-      }),
-    }),
+      });
+      return {
+        type: "books_etc",
+        title: ui.sections.books_etc,
+        count: itemViews.length,
+        kind: "items",
+        items: itemViews,
+      };
+    },
 
-    presentations: (items) => ({
-      type: "presentations",
-      title: ui.sections.presentations,
-      count: items.length,
-      kind: "items",
-      items: byDateDesc(items, "publication_date").map((p) => {
+    presentations: (items) => {
+      const filtered = items.filter((p) => t(p.presentation_title));
+      if (filtered.length === 0) return null;
+      const itemViews = byDateDesc(filtered, "publication_date").map((p) => {
         const badges: string[] = [];
         const type = ui.presentationType[p.presentation_type];
         if (type) badges.push(type);
@@ -520,41 +581,60 @@ export function buildSections(
           title: t(p.presentation_title),
           sub: names(p.presenters),
           meta: [
-            t(p.event),
+            t(p.event, true),
             fmtDate(p.publication_date ?? p.from_event_date),
           ].filter(Boolean),
           badges,
           links: externalLinks(p),
         };
-      }),
-    }),
+      });
+      return {
+        type: "presentations",
+        title: ui.sections.presentations,
+        count: itemViews.length,
+        kind: "items",
+        items: itemViews,
+      };
+    },
 
-    research_projects: (items) => ({
-      type: "research_projects",
-      title: ui.sections.research_projects,
-      count: items.length,
-      kind: "items",
-      items: byDateDesc(items, "from_date").map((p) => ({
+    research_projects: (items) => {
+      const filtered = items.filter((p) => t(p.research_project_title));
+      if (filtered.length === 0) return null;
+      const itemViews = byDateDesc(filtered, "from_date").map((p) => ({
         title: t(p.research_project_title),
         meta: [
-          [t(p.offer_organization), t(p.system_name)].filter(Boolean).join(" "),
+          [t(p.offer_organization, true), t(p.system_name, true)]
+            .filter(Boolean)
+            .join(" "),
           period(p.from_date, p.to_date),
         ].filter(Boolean),
         badges: [],
         links: [],
-      })),
-    }),
+      }));
+      return {
+        type: "research_projects",
+        title: ui.sections.research_projects,
+        count: itemViews.length,
+        kind: "items",
+        items: itemViews,
+      };
+    },
 
-    association_memberships: (items) => ({
-      type: "association_memberships",
-      title: ui.sections.association_memberships,
-      count: items.length,
-      kind: "rows",
-      rows: byDateDesc(items, "from_date").map((it) => ({
+    association_memberships: (items) => {
+      const filtered = items.filter((it) => t(it.academic_society_name));
+      if (filtered.length === 0) return null;
+      const rows = byDateDesc(filtered, "from_date").map((it) => ({
         period: period(it.from_date, it.to_date),
         main: t(it.academic_society_name),
-      })),
-    }),
+      }));
+      return {
+        type: "association_memberships",
+        title: ui.sections.association_memberships,
+        count: rows.length,
+        kind: "rows",
+        rows,
+      };
+    },
 
     academic_contribution: (items) =>
       genericItems(
@@ -571,16 +651,18 @@ export function buildSections(
     items: any[],
     type: string,
     titleKey: string,
-  ): SectionView {
+  ): SectionView | null {
+    const filtered = items.filter((it) => t(it[titleKey]));
+    if (filtered.length === 0) return null;
     return {
       type,
       title: ui.sections[type],
-      count: items.length,
+      count: filtered.length,
       kind: "items",
-      items: byDateDesc(items, "from_date").map((it) => ({
+      items: byDateDesc(filtered, "from_date").map((it) => ({
         title: t(it[titleKey]),
         meta: [
-          t(it.event),
+          t(it.event, true),
           period(it.from_date, it.to_date) || fmtDate(it.publication_date),
         ].filter(Boolean),
         badges: [],
@@ -594,7 +676,12 @@ export function buildSections(
       const items = sections[type];
       if (!items?.length) return null;
       const view = build(items);
-      if (view && !NO_COUNT.has(type)) view.count = items.length;
+      if (!view) return null;
+      if (!NO_COUNT.has(type) && view.count == null) {
+        if (view.kind === "chips") view.count = view.chips.length;
+        else if (view.kind === "rows") view.count = view.rows.length;
+        else if (view.kind === "items") view.count = view.items.length;
+      }
       return view;
     })
     .filter((v): v is SectionView => v != null);
