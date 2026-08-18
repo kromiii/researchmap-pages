@@ -43,11 +43,10 @@ npm run import /path/to/rm_researchersYYYYMMDD_XXXXXX.jsonl
 npm run dev
 
 # Cloudflare Pages へデプロイ
-npm run build
 npm run deploy
 ```
 
-※ `npm run build` で生成される `dist/` ディレクトリを GitHub Pages や Vercel 等にデプロイすることも可能です。
+※ `npm run build` で生成される `dist/` ディレクトリを手動で GitHub Pages や Vercel 等にデプロイすることも可能です。
 
 ---
 
@@ -55,10 +54,9 @@ npm run deploy
 
 - **業績データの更新**: 新しい JSONL ファイルで `npm run import` を実行して再デプロイします。
 - **画像・アイコンの変更**: `public/avatar.jpg`（アバター）や `public/favicon.svg`（ファビコン）を任意のファイルに置き換えられます。
-- **英語版（`/en/`）の有効化**: `ENABLE_EN=true` を指定してビルドします（英語表記がある項目のみ抽出されます）。
+- **英語版（`/en/`）の有効化**: `ENABLE_EN=true` を指定してデプロイします（英語表記がある項目のみ抽出されます）。
   ```sh
-  ENABLE_EN=true npm run build
-  npm run deploy
+  ENABLE_EN=true npm run deploy
   ```
 - **テンプレートの最新更新を取り込む**:
   ```sh
@@ -77,7 +75,7 @@ npm run deploy
 | `npm run import <file>`           | researchmap データの取り込み・サニタイズ           |
 | `npm run build`                   | 本番用ビルド (`dist/` に出力)                      |
 | `npm run preview`                 | ビルド成果物のローカル確認                         |
-| `npm run deploy`                  | Cloudflare Pages へのデプロイ                      |
+| `npm run deploy`                  | ビルドおよび Cloudflare Pages へのデプロイ         |
 | `npm run lint` / `npm run format` | コードのチェック・フォーマット                     |
 
 ---
